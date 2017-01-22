@@ -5,4 +5,14 @@ Third Edition
 by Ray Seyfarth
 Book web site: http://rayseyfarth.com/asm/
 
-Bobby Durrett
+Assemble:
+
+yasm -f elf64 -P ../../ebe/ebe.inc -g dwarf2 -l ex1.lst ex1.asm
+
+Link with start:
+
+ld -o ex1.exe ex1.o
+
+Link with main:
+
+gcc -o ex2.exe ex2.o
