@@ -8,11 +8,8 @@
 ; sign bit, and exponent without bias
 ; for both numbers.
 ; Then multiply fractions and add 
-; exponents. I guess xor sign bits?
-; maybe have to subtract out 23 from
-; exponents to get the two fractions to be
-; integers and then divide back to get
-; 1.xxxxx. Not sure.
+; exponents. Xor sign bits.
+; See comments below for more details.
         section .data
 input1  dd 2.0
 input2  dd 3.0  
@@ -32,9 +29,6 @@ start:
 ; Similar to exercise 5 pull out the
 ; fraction, exponent, and sign bits
 ; for the two numbers
-; Doing all this with 64 bit registers
-; is probably wrong but it is what it
-; is.
         mov eax,[input1]  ; Save input in eax
         mov ebx,eax       ; Use ebx for extract
         shl ebx,9         ; Clear out the top
