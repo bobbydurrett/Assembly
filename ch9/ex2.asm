@@ -7,6 +7,7 @@ asiz   dq 10                   ; array size
 i      dq 0                    ; array index
 maxpr  dq 20                   ; max size array to print 
 prnfmt db "%ld",0x0a,0         ; array element 
+newln  db 0x0a,0               ; new line 
        segment .text
        global main
        global fillarray
@@ -15,7 +16,6 @@ prnfmt db "%ld",0x0a,0         ; array element
        extern random
        extern printf
 main:
-       xor rax,rax              ; make debugger happy
        push rbp
        mov rbp,rsp
        call fillarray           ; fill array with random integers
@@ -28,10 +28,9 @@ main:
 fillarray:
 ; add asiz entries into array a
 ; call unix function random() 
-       xor rax,rax              ; make debugger happy
        push rbp
        mov rbp,rsp 
-.looptop
+.looptop:
        call random              ; get random int in rax
        mov r8,[i]               ; load array index
        mov [a+8*r8],rax         ; save in array
@@ -69,6 +68,9 @@ noswap:
 printarray:
        push rbp
        mov rbp,rsp 
+       lea rdi,[newln]      ; print newline format
+       xor eax,eax          ; no floating point args
+       call printf          ; print a line
        mov rax,[asiz]
        cmp rax,[maxpr]
        jg pdone
@@ -77,7 +79,7 @@ pnext:
        lea rdi,[prnfmt]     ; setting up read of one line fmt arg 1
        mov rsi,[a+8*rbx]    ; pointer to array element arg 2
        xor eax,eax          ; no floating point args
-       call printf          ; read a line
+       call printf          ; print a line
        inc rbx              ; next array element
        cmp rbx,[asiz]      ; make sure index < asize
        jl pnext

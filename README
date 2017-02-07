@@ -16,3 +16,22 @@ ld -o ex1.exe ex1.o
 Link with main:
 
 gcc -o ex2.exe ex2.o
+
+I found what seems to be a bug in yasm related to debugging.
+I discussed this on Stackoverflow in this thread:
+
+http://stackoverflow.com/questions/42079191/unexplained-segmentation-fault-running-to-breakpoint-in-gdb-in-x86-64-yasm-assem
+
+I redid chapter 9 exercise 2 using nasm and plan to use nasm instead of yasm as my assembler to see
+if it works better with gdb the debugger.
+
+Here is the nasm command I'm using:
+
+nasm -f elf64 ex1.asm -o ex1.o -l ex1.lst -g -F dwarf; ld -o ex1.exe ex1.o; gdb ex1.exe
+
+Note that I also left off the ebe.inc parameter. I have been using gdb only and not the ebe utility that 
+the book recommends. It is just easier for me to do everything command line through putty.  Also, I think
+that nasm may be a little more widely used than yasm so I don't mind switching over in case I do anything
+with x86-64 assembly after working through this book.
+
+
