@@ -19,11 +19,18 @@ setnumber  dq 0
 elmnumber  dq 0
 longscan   db "%ld",0                            ; read long integer
 qwbits     dq 64
+qwsperset  dq 15625
+elmformat  db "%ld",0x0a,0
+setoffset  dq 0
+qwoffset   dq 0
+cursetqw   dq 0
+bitoffset  dq 0
 
            segment .text
            global main
            global getcommand
            global addcommand
+           global printcommand
            extern scanf
            extern printf
 main:
@@ -43,7 +50,7 @@ main:
 .tryprint:
            cmp rax,2                             ; check for print command
            jne .done
-           ; call print command here
+           call printcommand
            jmp .getnextcommand
 .done:
            xor eax,eax                           ; return code 0
@@ -60,6 +67,7 @@ getcommand:
            xor eax,eax                           ; no floating point args
            call printf                           ; print prompt no newline
 ; Read command using scanf
+           mov qword [command],0                 ; clear command from earlier prompts
            lea rdi,[scanformat]                  ; setting up read of one line fmt arg 1
            lea rsi,[command]                     ; pointer to command being read in arg 2
            xor eax,eax                           ; no floating point args
@@ -113,6 +121,56 @@ addcommand:
            xor rdx,rdx                           ; clear for remainder
            idiv qword [qwbits]                   ; divide by 64 - result in rax, remainder in rdx = bit offset
            add rbx,rax                           ; get full offset into the quad array
-           bts [allsets+rbx],rdx                 ; set the bit at the quad word indexed by rbx and the bit number in rdx
+           bts [allsets+rbx*8],rdx               ; set the bit at the quad word indexed by rbx and the bit number in rdx. 8 bytes per qw
+           leave
+           ret
+printcommand:
+; THIS IS NOT YET WORKING!
+; Prompt for a set number (0-9) and print the elements of that set.
+           push rbp
+           mov rbp,rsp
+; Prompt for set number
+           lea rdi,[setprompt]                   ; load printf format
+           xor eax,eax                           ; no floating point args
+           call printf                           ; print prompt no newline
+; Read set number using scanf
+           lea rdi,[longscan]                    ; scanf format
+           lea rsi,[setnumber]                   ; pointer to set number variable
+           call scanf                            ; read a line
+; The ten sets are stored in allsets which is 156250 8 byte quadwords,
+; 15625 per set. Need to calculate the offset into the prompted set and then
+; look for 1 bits in each of the 15625 qwords. 
+           mov rax,[setnumber]                   ; load the set number
+           imul rax,15625                        ; multiply by 15625 to get the offset in the array of qws in rax
+           mov [setoffset],rax                   ; save in setoffset
+           mov qword[qwoffset],0                 ; qwoffset is the index into the 15625 words of the set. start at 0 less than qwsperset
+.nextqword:
+           mov rcx,[setoffset]                   ; load set offset
+           add rcx,[qwoffset]                    ; add qword offset
+           mov rax,[allsets+rcx*8]               ; load the qword for this part of the set into rax. 8 bytes per qword
+           mov [cursetqw],rax                    ; load the qword for this part of the set into cursetqw
+           mov qword [bitoffset],0               ; initialize bit offset to 0, max < qwbits
+.nextbit:
+           mov rax,[cursetqw]                    ; restore the qword for this part of the set into rax
+           mov rbx,[bitoffset]                   ; restore the bit offset to rbx
+           bt rax,rbx                            ; test for the bit
+           jnc .noprint                          ; no carry = bit is zero, not element of set
+; code to print element number within the set is here
+           lea rdi,[elmformat]                   ; format to print an element number on a line
+           mov rsi,[qwoffset]                    ; load qw offset
+           imul rsi,[qwbits]                     ; multiply to get bit offset of bit 0 of the qword
+           add rsi,[bitoffset]                   ; add bit offset to get element number in rax
+           xor eax,eax                           ; no floating point args
+           call printf                           ; print a line
+.noprint:   
+           add qword [bitoffset],1               ; next bit
+           mov rax,[bitoffset]                   ; load bit offset
+           cmp rax,[qwbits]                      ; check bit number in range 0-63
+           jl .nextbit                           ; process next bit
+           add qword [qwoffset],1                ; next qword of set
+           mov rax,[qwoffset]                    ; load quad word offset in rax
+           cmp rax,[qwsperset]                   ; check qword in range 0-15624
+           jl .nextqword                         ; process next qword
+; done if we reach here           
            leave
            ret
