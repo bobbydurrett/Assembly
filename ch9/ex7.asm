@@ -1,11 +1,14 @@
 ; check for balanced parentheses
 ; 
+; DOES NOT YET WORK WITH ((()())())
            segment .bss
 parray     resb 80                              ; zero terminated array of parentheses
            segment .data
 inputfmt   db "%79s",0                          ; up to 79 parentheses
 leftparen  db "("
 rightparen db ")"
+matchfmt   db "Matched",0x0a,0 
+nomatchfmt db "Not matched",0x0a,0 
            segment .text
            global main
            global isbalanced
@@ -21,6 +24,18 @@ main:
            mov rdi,0                             ; beginning of entire string
            mov rsi,79                            ; end of string - points to a zero
            call isbalanced
+           cmp eax,1                             ; eax == 1 if matched
+           je .matched
+; not matched if got here
+           lea rdi,[nomatchfmt]                  ; setting up read of one line fmt arg 1
+           xor eax,eax                           ; no floating point args
+           call printf                           ; print a line
+           jmp .done
+.matched:
+           lea rdi,[matchfmt]                    ; setting up read of one line fmt arg 1
+           xor eax,eax                           ; no floating point args
+           call printf                           ; print a line
+.done:
            xor eax,eax                           ; return code 0
            leave                                 ; fix stack
            ret                                   ; return
@@ -81,7 +96,7 @@ isbalanced:
            jl .fail                              ; fail if < 0
            cmp rbx,0
            je .recurse                           ; need to do recursive calls
-           add [rsp+matchindex],1                ; advance to next byte for matchindex
+           add qword [rsp+matchindex],1          ; advance to next byte for matchindex
            jmp .notempty                         ; check next byte
 .recurse:
 ; at this point matchindex points to the byte that has the final )
