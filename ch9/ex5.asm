@@ -24,6 +24,7 @@ dirchanges dq 0
 currindex  dq 0
 bitfmt     db "Is bitonic",0x0a,0 
 notbitfmt  db "Is not bitonic",0x0a,0 
+descended  dq 0                          ; set to 1 if ever in descending state
            segment .text
            global main
            global loadarray
@@ -75,6 +76,7 @@ isbitonic:
            add qword [dirchanges],1                    ; already ascending so now have changed direction
 .notascending:
            mov qword [state],3                         ; state in now descending
+           mov qword [descended],1
            jmp .nextelement                      ; go to next element
 .equal:
            jmp .nextelement                      ; go to next element, same state
@@ -116,14 +118,16 @@ isbitonic:
            jmp .nodirchange
 .nodirchange:
            cmp qword [dirchanges],1
+           jne .check2changes
+           cmp qword [descended],1
            je .bitonic
+.check2changes:
            cmp qword [dirchanges],2
            je .bitonic
 ; not bitonic if got here
            lea rdi,[notbitfmt]                   ; setting up read of one line fmt arg 1
            xor eax,eax                           ; no floating point args
            call printf                           ; print a line
-
            jmp .done
 .bitonic:
            lea rdi,[bitfmt]                      ; setting up read of one line fmt arg 1
