@@ -7,35 +7,44 @@
 allsets    resq 156250                           ; array of quads
            segment .data
 scanformat db "%5s",0                            ; max 5 byte command
-command    dq 0
-addcmd     db "add",0,0,0,0,0
+command    dq 0                                  ; 8 byte buffer to read command into 
+addcmd     db "add",0,0,0,0,0                    ; strings to compare scanf buffer to
 unioncmd   db "union",0,0,0
 printcmd   db "print",0,0,0
 quitcmd    db "quit",0,0,0,0
-prompt     db "Enter command (add,union,print,quit): ",0  
-setprompt  db "Enter set number (0-9): ",0  
-elmprompt  db "Enter element number (0-999999): ",0  
-setnumber  dq 0
-elmnumber  dq 0
-longscan   db "%ld",0                            ; read long integer
-qwbits     dq 64
-qwsperset  dq 15625
-elmformat  db "%ld",0x0a,0
-setoffset  dq 0
-qwoffset   dq 0
-cursetqw   dq 0
-bitoffset  dq 0
-
+prompt     db "Enter command (add,union,print,quit): ",0 ; getcommand prompt  
+setprompt  db "Enter set number (0-9): ",0               ; prompt for any set request
+elmprompt  db "Enter element number (0-999999): ",0      ; prompt for any element request
+setnumber  dq 0                                          ; requested set (0-9)
+elmnumber  dq 0                                          ; requested element (0-63)
+longscan   db "%ld",0                                    ; read long integer - qword
+qwbits     dq 64                                         ; bits in a quad word
+qwsperset  dq 15625                                      ; quad words per 1,000,000 element set
+elmformat  db "%ld",0x0a,0                               ; format to print elements
+setoffset  dq 0                                          ; offset into allsets for the current set
+qwoffset   dq 0                                          ; offset within current set
+cursetqw   dq 0                                          ; contents of the quad word for the element
+bitoffset  dq 0                                          ; offset for the bit within the current quad word
+unionset1  dq 0                                          ; first set in union and result location
+unionset2  dq 0                                          ; second set in union
+set1prompt db "Enter set number (0-9) for first set in union: ",0               
+set2prompt db "Enter set number (0-9) for second set in union: ",0               
+set1offset dq 0                                          ; offset into allsets for the current set
+set2offset dq 0                                          ; offset into allsets for the current set
+curset1qw  dq 0                                          ; contents of the quad word for the element
+curset2qw  dq 0                                          ; contents of the quad word for the element
            segment .text
            global main
            global getcommand
            global addcommand
            global printcommand
+           global unioncommand
            extern scanf
            extern printf
 main:
            push rbp
            mov rbp,rsp
+; Command loop - process add, union, print, quit commands
 .getnextcommand:
            call getcommand
            cmp rax,0                             ; check for add command
@@ -45,7 +54,7 @@ main:
 .tryunion:
            cmp rax,1                             ; check for union command
            jne .tryprint
-           ; call union command here
+           call unioncommand
            jmp .getnextcommand
 .tryprint:
            cmp rax,2                             ; check for print command
@@ -125,7 +134,6 @@ addcommand:
            leave
            ret
 printcommand:
-; THIS IS NOT YET WORKING!
 ; Prompt for a set number (0-9) and print the elements of that set.
            push rbp
            mov rbp,rsp
@@ -172,5 +180,58 @@ printcommand:
            cmp rax,[qwsperset]                   ; check qword in range 0-15624
            jl .nextqword                         ; process next qword
 ; done if we reach here           
+           leave
+           ret
+unioncommand:
+; Prompt for two set numbers and union the two sets leaving the 
+; results in the first set.
+           push rbp
+           mov rbp,rsp
+; Prompt for set number
+           lea rdi,[set1prompt]                  ; load printf format
+           xor eax,eax                           ; no floating point args
+           call printf                           ; print prompt no newline
+; Read set number using scanf
+           lea rdi,[longscan]                    ; scanf format
+           lea rsi,[unionset1]                   ; pointer to set number variable
+           call scanf                            ; read a line
+; Prompt for set number
+           lea rdi,[set2prompt]                  ; load printf format
+           xor eax,eax                           ; no floating point args
+           call printf                           ; print prompt no newline
+; Read set number using scanf
+           lea rdi,[longscan]                    ; scanf format
+           lea rsi,[unionset2]                   ; pointer to set number variable
+           call scanf                            ; read a line  
+; get the qw offsets for the two sets
+           mov rax,[unionset1]                   ; load the set number
+           imul rax,15625                        ; multiply by 15625 to get the offset in the array of qws in rax
+           mov [set1offset],rax                   ; save in setoffset
+           mov rax,[unionset2]                   ; load the set number
+           imul rax,15625                        ; multiply by 15625 to get the offset in the array of qws in rax
+           mov [set2offset],rax                   ; save in setoffset
+; loop through all of the qwords of the two sets - one offset variable qwoffset
+           mov qword[qwoffset],0                 ; qwoffset is the index into the 15625 words of the set. start at 0 less than qwsperset
+.nextqword:
+; get current quad words for both sets
+           mov rcx,[set1offset]                  ; load set offset
+           add rcx,[qwoffset]                    ; add qword offset
+           mov rax,[allsets+rcx*8]               ; load the qword for this part of the set into rax. 8 bytes per qword
+           mov [curset1qw],rax                   ; load the qword for this part of the set into cursetqw
+           mov rcx,[set2offset]                  ; load set offset
+           add rcx,[qwoffset]                    ; add qword offset
+           mov rax,[allsets+rcx*8]               ; load the qword for this part of the set into rax. 8 bytes per qword
+           mov [curset2qw],rax                   ; load the qword for this part of the set into cursetqw
+           mov rax,[curset1qw]                   ; load set 1 current qw
+           or  rax,[curset2qw]                   ; or is union
+           mov [curset1qw],rax                   ; update set 1 current qs
+           mov rcx,[set1offset]                  ; load set offset
+           add rcx,[qwoffset]                    ; add qword offset
+           mov [allsets+rcx*8],rax               ; store updated set 1 qw in array
+; advance to new qw if not done
+           add qword [qwoffset],1                ; next qword of set
+           mov rax,[qwoffset]                    ; load quad word offset in rax
+           cmp rax,[qwsperset]                   ; check qword in range 0-15624
+           jl .nextqword                         ; process next qword
            leave
            ret
