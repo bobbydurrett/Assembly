@@ -1,6 +1,5 @@
 ; check for balanced parentheses
 ; 
-; DOES NOT YET WORK WITH ((()())())
            segment .bss
 parray     resb 80                              ; zero terminated array of parentheses
            segment .data
@@ -121,9 +120,13 @@ isbalanced:
            inc rdi                                     ; new start is matchindex + 1
            mov rsi,qword [rsp+endindex]                ; load endindex for recursive call
            dec rsi                                     ; new end is matchindex - 1
+           cmp rdi,rsi                                 ; make sure matchindex <= endindex
+           jg .success                                 ; return success if matchindex > endindex. no need to recurse
            call isbalanced
            cmp eax,1                                   ; is substring balanced?
            jne .fail                                   ; fail if not
+.success:
+           mov eax,1
 ; eax is 1 if we get here so let fall through for success
 .done:
            leave
