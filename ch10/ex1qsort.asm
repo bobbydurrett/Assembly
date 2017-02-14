@@ -8,9 +8,11 @@ i      dq 0                     ; array index
        global main
        global fillarray
        global sortarray
+       global compare
        extern atol
        extern malloc
        extern random
+       extern qsort
 main:
        push rbp
        mov rbp,rsp
@@ -49,29 +51,25 @@ fillarray:
        jl .looptop
        leave
        ret
-sortarray:
-; sort array a using bubble sort
+compare:
+; compare two integers
+; pointers in rdi, rsi
+; return value in eax
        push rbp
        mov rbp,rsp 
-       mov r8,[asize]       ; load size of array
-       dec r8               ; subtract 1 - max index of bubble sort element compare
-       mov r9,[aptr]        ; load array pointer in r9
-nextpass:
-       xor rax,rax          ; rax is 0 if no elements were swapped in this pass
-       xor rbx,rbx          ; rbx is index into array start at 0 = i
-nextelement:
-       mov ecx,[r9+4*rbx]   ; ecx = a[i]
-       mov edx,[r9+4*rbx+4] ; edx = a[i+1]
-       cmp ecx,edx          ; compare a[i] and a[i+1]
-       jle noswap           ; if a[i]<=a[i+1] don't swap
-       inc rax              ; rax has count of swaps
-       mov [r9+4*rbx+4],ecx ; swap using values in registers
-       mov [r9+4*rbx],edx   ; a[i] and a[i+1] swapped
-noswap:
-       inc rbx              ; i++
-       cmp rbx,r8           ; index max is asize-2
-       jl nextelement       ; move to next element
-       cmp rax,0            ; see if any swaps were done
-       jg  nextpass         ; make another pass through array
+       mov eax,[rdi]            ; load first integer
+       sub eax,[rsi]            ; subtract second integer
+       leave
+       ret
+sortarray:
+; sort array a using qsort
+       push rbp
+       mov rbp,rsp 
+; qsort(array,n,4,compare)
+       mov rdi,[aptr]           ; pointer to array arg1
+       mov rsi,[asize]          ; array size arg 2
+       mov rdx,4                ; number of bytes per entry - 4
+       lea rcx,[compare]        ; address of my compare function
+       call qsort
        leave
        ret
