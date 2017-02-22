@@ -7,7 +7,8 @@
 ; xmm0 to xmm7 contain the float arguments
 ; These registers must be preserved across function calls:
 ; rbx, rsp, rbp, r12-r15
-; rax is the return register
+; rax and rdx are the integer return registers
+; xmm0 and xmm1 are the float return resgisters
 ; https://software.intel.com/sites/default/files/article/402129/mpx-linux64-abi.pdf
 
 global main                  ; globals and externs before segments and col 1
