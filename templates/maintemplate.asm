@@ -3,6 +3,7 @@
 
            segment .data
 abcdeabcde dq 0                       ; ten character variable names
+           segment .text
 main:
            push rbp                   ; opcodes start column 12
            mov rbp,rsp                ; comments from 39 to 79 ................
