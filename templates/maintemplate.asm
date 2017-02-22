@@ -9,7 +9,7 @@
 ; rbx, rsp, rbp, r12-r15
 ; rax and rdx are the integer return registers
 ; xmm0 and xmm1 are the float return resgisters
-; https://software.intel.com/sites/default/files/article/402129/mpx-linux64-abi.pdf
+; http://www.nasm.us/links/unix64abi
 
 global main                  ; globals and externs before segments and col 1
 extern stdin
