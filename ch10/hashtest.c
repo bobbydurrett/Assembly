@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-int multipliers[] = {
+long multipliers[] = {
     123456789,
     234567891,
     345678912,
