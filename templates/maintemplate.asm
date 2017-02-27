@@ -11,7 +11,7 @@
 ; xmm0 and xmm1 are the float return resgisters
 ; http://www.nasm.us/links/unix64abi
 
-global main                  ; globals and externs before segments and col 1
+global main                      ; globals and externs before segments and col 1
 extern stdin
 
 ; segment column 1
@@ -22,14 +22,16 @@ data_buffer resb 1024
 
 segment .data
 
-meaningful_name dq 0         ; arbitrary length variable names
+meaningful_name dq 0             ; arbitrary length variable names
+
+really_long_name:                ; size can start column 5 after label with :
+    dq 0
 
 segment .text
 
-main:	                     ; labels separated by blank lines
-
-push rbp                     ; opcodes start column 1
-mov rbp,rsp                  ; comments from 30 to 79 .........................
+main:	                         ; labels start column 1
+    push rbp                     ; opcodes start column 5
+    mov rbp,rsp                  ; comments from 34 unless opcode and arguments are too long
 
 ; Argc and argv are in rdi and rsi
 ; Argc is number of arguments including name of program
@@ -37,6 +39,6 @@ mov rbp,rsp                  ; comments from 30 to 79 .........................
 
 ; My code goes here
 
-xor rax,rax                  ; return code 0
-leave                        ; fix stack
-ret                          ; return
+    xor rax,rax                  ; return code 0
+    leave                        ; fix stack
+    ret                          ; return
