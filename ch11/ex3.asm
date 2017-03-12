@@ -162,8 +162,9 @@ readinput:
 segment .data
 
 x dq 0.0 
-xpower dq 1.0                    ; power of x = x^0 = 1
+xpower dq 0.0                    ; power of x = x^0 = 1
 sum dq 0.0                       ; sum of polynomial terms
+d_one dq 1.0
 
 segment .text
 
@@ -173,6 +174,8 @@ calc_polynomial:
     
     movsd [x],xmm0               ; save input x
 ; p0
+    movsd xmm0,[d_one]
+    movsd [xpower],xmm0          ; start xpower at 1.0 for x^0
     movsd xmm0,[p0]
     movsd [sum],xmm0             ; sum starts with p0
 ; p1
