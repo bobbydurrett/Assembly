@@ -121,8 +121,9 @@ main:
     call printf
 .notstringfound:                 ; curr byte is newline but find string not found
     xor rax,rax                  ; set to zero
-    mov qword [curr_line_offset],rax
+    mov qword [curr_line_offset],rax ; clear all three for new line
     mov qword [find_str_offset],rax
+    mov qword [string_found],rax
     jmp .nextbyte
 .notnewline:                     ; curr byte is not new line
     mov rax,qword [curr_byte]    ; curr byte in rax
