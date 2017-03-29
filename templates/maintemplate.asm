@@ -8,7 +8,7 @@
 ; These registers must be preserved across function calls:
 ; rbx, rsp, rbp, r12-r15
 ; rax and rdx are the integer return registers
-; xmm0 and xmm1 are the float return resgisters
+; xmm0 and xmm1 are the float return registers
 ; http://www.nasm.us/links/unix64abi
 
 global main                      ; globals and externs before segments and col 1
