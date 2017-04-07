@@ -9,16 +9,6 @@
 ; elementnum is an integer 0 to 9999
 ; quit will exit the program
 
-; Non-float arguments in these registers:
-; rdi, rsi, rdx, rcx, r8 and r9
-; rax contains the number of floating point arguments
-; xmm0 to xmm7 contain the float arguments
-; These registers must be preserved across function calls:
-; rbx, rsp, rbp, r12-r15
-; rax and rdx are the integer return registers
-; xmm0 and xmm1 are the float return resgisters
-; http://www.nasm.us/links/unix64abi
-
 global main,createset,commandloop,addtoset,removefromset,testinset
 extern printf,scanf,malloc
 
