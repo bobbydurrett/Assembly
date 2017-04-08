@@ -11,7 +11,7 @@
 ; elementnum is an integer 0 to 9999
 ; quit will exit the program
 
-global main,createset,commandloop,addtoset,unionsets,insersectsets,printset
+global main,createset,commandloop,addtoset,unionsets,intersectsets,printset
 extern printf,scanf,malloc
 
 segment .bss
@@ -33,7 +33,7 @@ main:
    
 ; create 10 sets
     xor rbx,rbx                  ; rbx is loop counter for 10 sets
-.nextset 
+.nextset:
     mov rdi,10000                ; get set of size 10,000
     call createset               ; create set
     mov [set_ptr_array+rbx*8],rax ; save pointer to allocated structure
@@ -130,15 +130,21 @@ commandloop:
     xor rax,rax                  ; no floating point args
     call scanf                   ; read a line
 ; Process command - add,union,intersec,print,quit
-; Functions addtoset,unionsets,insersectsets,printset
+; Functions addtoset,unionsets,intersectsets,printset
     mov r8,qword [command]       ; load read in command in rax as 8 byte value
     cmp r8,qword [addcmd]        ; compare read in command to "add"
     jne .tryunion                ; try next command
 ; read set and element and call function
+    lea rdi,[setpmt]             ; load printf format for command prompt arg 1
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print prompt no newline
     lea rdi,[numfmt]             
     lea rsi,[set1num]            
     xor rax,rax                  ; no floating point args
     call scanf                   ; read a line
+    lea rdi,[elmpmt]             ; load printf format for command prompt arg 1
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print prompt no newline
     lea rdi,[numfmt]             
     lea rsi,[elementnum]         
     xor rax,rax                  ; no floating point args
@@ -151,10 +157,16 @@ commandloop:
     cmp r8,qword [unioncmd]      
     jne .tryintersec             ; try next command
 ; read two set nums and call function
+    lea rdi,[setpmt]             ; load printf format for command prompt arg 1
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print prompt no newline
     lea rdi,[numfmt]             
     lea rsi,[set1num]            
     xor rax,rax                  ; no floating point args
     call scanf                   ; read a line
+    lea rdi,[setpmt]             ; load printf format for command prompt arg 1
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print prompt no newline
     lea rdi,[numfmt]             
     lea rsi,[set2num]         
     xor rax,rax                  ; no floating point args
@@ -167,10 +179,16 @@ commandloop:
     cmp r8,qword [intercmd]     
     jne .tryprint                ; try next command
 ; read two set nums and call function
+    lea rdi,[setpmt]             ; load printf format for command prompt arg 1
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print prompt no newline
     lea rdi,[numfmt]             
     lea rsi,[set1num]            
     xor rax,rax                  ; no floating point args
     call scanf                   ; read a line
+    lea rdi,[setpmt]             ; load printf format for command prompt arg 1
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print prompt no newline
     lea rdi,[numfmt]             
     lea rsi,[set2num]         
     xor rax,rax                  ; no floating point args
@@ -183,6 +201,9 @@ commandloop:
     cmp r8,qword [printcmd]      
     jne .tryquit
 ; read one set num and call function
+    lea rdi,[setpmt]             ; load printf format for command prompt arg 1
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print prompt no newline
     lea rdi,[numfmt]             
     lea rsi,[set1num]            
     xor rax,rax                  ; no floating point args
@@ -196,96 +217,36 @@ commandloop:
     leave                        ; fix stack
     ret                          ; return
     
-; addtoset adds an element to a set
-; arguments:
-; rdi - pointer to set structure
-; rsi - the element number (0-9999) 
-
-segment .text
+; Functions addtoset,unionsets,intersectsets,printset
 
 addtoset:	                         
     push rbp                     
     mov rbp,rsp
-; check element in range
-    cmp rsi,0                    ; check element < 0
-    jl .done
-    cmp rsi,[rdi+setsize]
-    jge .done                    ; >= set size is out of range
-; actually set the bit
-    mov rax,rsi                  ; load the element number
-    xor rdx,rdx                  ; clear for remainder
-    mov r8,64                    ; load constant 64 for division
-    idiv r8                      ; divide by 64 - result in rax, remainder in rdx = bit offset
-    bts [rdi+setarrayptr+rax*8],rdx ; set the bit at the quad word
-.done:
+
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
     ret                          ; return
 
-; removefromset removes an element from a set
-; arguments:
-; rdi - pointer to set structure
-; rsi - the element number (0-9999) 
-
-removefromset:	                         
+unionsets:	                         
     push rbp                     
-    mov rbp,rsp                  
-; check element in range
-    cmp rsi,0                    ; check element < 0
-    jl .done
-    cmp rsi,[rdi+setsize]
-    jge .done                    ; >= set size is out of range
-; actually clear the bit
-    mov rax,rsi                  ; load the element number
-    xor rdx,rdx                  ; clear for remainder
-    mov r8,64                    ; load constant 64 for division
-    idiv r8                      ; divide by 64 - result in rax, remainder in rdx = bit offset
-    btr [rdi+setarrayptr+rax*8],rdx ; clear(reset) the bit at the quad word
-.done:
+    mov rbp,rsp
+
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
     ret                          ; return
 
-; testinset checks if an element is in a set
-; arguments:
-; rdi - pointer to set structure
-; rsi - the element number (0-9999) 
-
-segment .data
-
-insetfmt db `Element %ld is in the set\n`,0 ; bit found 
-notinsetfmt db `Element %ld is not in the set\n`,0 ; bit found 
-
-segment .text
-
-testinset:	                         
+intersectsets:	                         
     push rbp                     
-    mov rbp,rsp                  
-; check element in range
-    cmp rsi,0                    ; check element < 0
-    jl .done
-    cmp rsi,[rdi+setsize]
-    jge .done                    ; >= set size is out of range
-; actually check the bit
-    mov rax,rsi                  ; load the element number
-    xor rdx,rdx                  ; clear for remainder
-    mov r8,64                    ; load constant 64 for division
-    idiv r8                      ; divide by 64 - result in rax, remainder in rdx = bit offset
-    bt [rdi+setarrayptr+rax*8],rdx ; check the bit at the quad word
-    jc .bitset
-; element not in set
-    lea rdi,[notinsetfmt]        ; load printf format for command prompt arg 1
-; element number is still in rsi
-    xor rax,rax                  ; no floating point args
-    call printf                  ; print line
-    jmp .done
-.bitset:
-; element is in set
-    lea rdi,[insetfmt]        ; load printf format for command prompt arg 1
-; element number is still in rsi
-    xor rax,rax                  ; no floating point args
-    call printf                  ; print line
-.done:
+    mov rbp,rsp
+
+    xor rax,rax                  ; return code 0
+    leave                        ; fix stack
+    ret                          ; return
+
+printset:	                         
+    push rbp                     
+    mov rbp,rsp
+
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
     ret                          ; return
