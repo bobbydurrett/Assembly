@@ -350,9 +350,60 @@ intersectsets:
     leave                        ; fix stack
     ret                          ; return
 
+segment .data
+
+setptr dq 0
+cursetqw dq 0  
+bitoffset dq 0
+elmformat db `%ld\n`,0
+
+segment .text
+
 printset:	                         
     push rbp                     
     mov rbp,rsp
+
+; get set pointer
+    mov r8,[set_ptr_array+rdi*8]
+    mov [setptr],r8              ; save set pointer
+; calculate bytes per set 
+    mov rax,[r8+setsize]         ; set size offset
+    xor rdx,rdx                  ; clear remainder
+    mov r9,64                    ; 64 bits per qword
+    div r9                       ; setsize/64 in rax now
+    inc rax                      ; 1 more qword for overflow into last qword
+    mov [qwordsperset],rax       ; save number of qwords in the set
+    mov qword[qwoffset],0        ; qwoffset is the index into the words of the set.
+.nextqword:
+    mov rcx,[qwoffset]           ; qword offset
+    mov r8,[setptr]              ; pointer to set
+    mov r9,[r8+setarrayptr]      ; pointer to set array
+    mov rax,[r9+rcx*8]           ; load the qword for this part of the set into rax. 8 bytes per qword
+    mov [cursetqw],rax           ; load the qword for this part of the set into cursetqw
+    mov qword [bitoffset],0      ; initialize bit offset to 0, max < 64
+.nextbit:
+    mov rax,[cursetqw]           ; restore the qword for this part of the set into rax
+    mov r8,[bitoffset]           ; restore the bit offset to rbx
+    bt rax,r8                    ; test for the bit
+    jnc .noprint                 ; no carry = bit is zero, not element of set
+; code to print element number within the set is here
+    lea rdi,[elmformat]          ; format to print an element number on a line
+    mov rsi,[qwoffset]           ; load qw offset
+    mov r8,64
+    imul rsi,r8                  ; multiply to get bit offset of bit 0 of the qword
+    add rsi,[bitoffset]          ; add bit offset to get element number in rax
+    xor eax,eax                  ; no floating point args
+    call printf                  ; print a line
+.noprint:   
+    add qword [bitoffset],1      ; next bit
+    mov rax,[bitoffset]          ; load bit offset
+    mov r8,64
+    cmp rax,r8                   ; check bit number in range 0-63
+    jl .nextbit                  ; process next bit
+    add qword [qwoffset],1       ; next qword of set
+    mov rax,[qwoffset]           ; load quad word offset in rax
+    cmp rax,[qwordsperset]       ; check qword in range
+    jl .nextqword                ; process next qword
 
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
