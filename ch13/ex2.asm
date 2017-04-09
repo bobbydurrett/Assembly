@@ -217,27 +217,134 @@ commandloop:
     leave                        ; fix stack
     ret                          ; return
     
-; Functions addtoset,unionsets,intersectsets,printset
+; addtoset - add one element to one set
+; arguments
+; rdi - set number
+; rsi - element number
 
 addtoset:	                         
     push rbp                     
     mov rbp,rsp
-
+; Load pointer to set structure into rcx
+    mov rcx,[set_ptr_array+rdi*8]
+; actually set the bit
+    mov rax,rsi                  ; load the element number
+    xor rdx,rdx                  ; clear for remainder
+    mov r8,64                    ; load constant 64 for division
+    idiv r8                      ; divide by 64 - result in rax, remainder in rdx = bit offset
+    bts [rcx+setarrayptr+rax*8],rdx ; set the bit at the quad word
+.done:
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
     ret                          ; return
+
+; unionsets - union two sets and replace first with result
+; arguments
+; rdi - set 1 number
+; rsi - set 2 number
+; assuming that all sets are same max size
+
+segment .data
+
+set1ptr dq 0
+set2ptr dq 0
+qwordsperset dq 0
+qwoffset dq 0
+curset1qw dq 0
+curset2qw dq 0
+
+segment .text
 
 unionsets:	                         
     push rbp                     
     mov rbp,rsp
+; get pointers to the two sets
+    mov r9,[set_ptr_array+rdi*8]
+    mov [set1ptr],r9
+    mov r9,[set_ptr_array+rsi*8]
+    mov [set2ptr],r9
+; calculate bytes per set - assume both sets have the same size
+    mov r8,[set1ptr]             ; get size from first set
+    mov rax,[r8+setsize]         ; set size offset
+    xor rdx,rdx                  ; clear remainder
+    mov r9,64                    ; 64 bits per qword
+    div r9                       ; setsize/64 in rax now 
+    inc rax                      ; 1 more qword for overflow into last qword
+    mov [qwordsperset],rax       ; save number of qwords in the set
+; loop through all of the qwords of the two sets
+    mov qword[qwoffset],0        ; qwoffset is the index into the set. start at 0 less than qwsperset
+.nextqword:
+; get current quad words for both sets
+    mov rcx,[qwoffset]           ; qword offset
+    mov r8,[set1ptr]             ; pointer to set 1 array 
+    mov rax,[r8+rcx*8]           ; load the qword for this part of the set into rax. 8 bytes per qword
+    mov [curset1qw],rax          ; save this qword for set 1
+    mov r8,[set2ptr]             ; pointer to set 1 array 
+    mov rax,[r8+rcx*8]           ; load the qword for this part of the set into rax. 8 bytes per qword
+    mov [curset2qw],rax          ; save this qword for set 2
+; or for union
+    mov rax,[curset1qw]          ; load set 1 current qw
+    or  rax,[curset2qw]          ; or is union
+; save updated set 1 qword
+    mov rcx,[qwoffset]           ; qword offset
+    mov r8,[set1ptr]             ; pointer to set 1 array 
+    mov [r8+rcx*8],rax           ; save the qword back to the array
+; advance to new qw if not done
+    add qword [qwoffset],1       ; next qword of set
+    mov rax,[qwoffset]           ; load quad word offset in rax
+    cmp rax,[qwordsperset]       ; check qword in range
+    jl .nextqword                ; process next qword
 
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
     ret                          ; return
 
+; intersectsets - intersect two sets and replace first with result
+; arguments
+; rdi - set 1 number
+; rsi - set 2 number
+; assuming that all sets are same max size
+
 intersectsets:	                         
     push rbp                     
     mov rbp,rsp
+
+; get pointers to the two sets
+    mov r9,[set_ptr_array+rdi*8]
+    mov [set1ptr],r9
+    mov r9,[set_ptr_array+rsi*8]
+    mov [set2ptr],r9
+; calculate bytes per set - assume both sets have the same size
+    mov r8,[set1ptr]             ; get size from first set
+    mov rax,[r8+setsize]         ; set size offset
+    xor rdx,rdx                  ; clear remainder
+    mov r9,64                    ; 64 bits per qword
+    div r9                       ; setsize/64 in rax now 
+    inc rax                      ; 1 more qword for overflow into last qword
+    mov [qwordsperset],rax       ; save number of qwords in the set
+; loop through all of the qwords of the two sets
+    mov qword[qwoffset],0        ; qwoffset is the index into the set. start at 0 less than qwsperset
+.nextqword:
+; get current quad words for both sets
+    mov rcx,[qwoffset]           ; qword offset
+    mov r8,[set1ptr]             ; pointer to set 1 array 
+    mov rax,[r8+rcx*8]           ; load the qword for this part of the set into rax. 8 bytes per qword
+    mov [curset1qw],rax          ; save this qword for set 1
+    mov r8,[set2ptr]             ; pointer to set 1 array 
+    mov rax,[r8+rcx*8]           ; load the qword for this part of the set into rax. 8 bytes per qword
+    mov [curset2qw],rax          ; save this qword for set 2
+; and for intersection
+    mov rax,[curset1qw]          ; load set 1 current qw
+    and rax,[curset2qw]          ; and is intersection
+; save updated set 1 qword
+    mov rcx,[qwoffset]           ; qword offset
+    mov r8,[set1ptr]             ; pointer to set 1 array 
+    mov [r8+rcx*8],rax           ; save the qword back to the array
+; advance to new qw if not done
+    add qword [qwoffset],1       ; next qword of set
+    mov rax,[qwoffset]           ; load quad word offset in rax
+    cmp rax,[qwordsperset]       ; check qword in range
+    jl .nextqword                ; process next qword
 
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
