@@ -225,14 +225,15 @@ commandloop:
 addtoset:	                         
     push rbp                     
     mov rbp,rsp
-; Load pointer to set structure into rcx
-    mov rcx,[set_ptr_array+rdi*8]
-; actually set the bit
+; Load pointer to set array into rcx
+    mov r9,[set_ptr_array+rdi*8] ; r9 contains a pointer to a the set structure
+    mov rcx,[r9+setarrayptr]     ; rcx contains a pointer to the array for the set
+ ; actually set the bit
     mov rax,rsi                  ; load the element number
     xor rdx,rdx                  ; clear for remainder
     mov r8,64                    ; load constant 64 for division
     idiv r8                      ; divide by 64 - result in rax, remainder in rdx = bit offset
-    bts [rcx+setarrayptr+rax*8],rdx ; set the bit at the quad word
+    bts [rcx+rax*8],rdx          ; set the bit at the quad word
 .done:
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
@@ -276,10 +277,12 @@ unionsets:
 .nextqword:
 ; get current quad words for both sets
     mov rcx,[qwoffset]           ; qword offset
-    mov r8,[set1ptr]             ; pointer to set 1 array 
+    mov r9,[set1ptr]             ; load pointer to set
+    mov r8,[r9+setarrayptr]      ; pointer to set 1 array 
     mov rax,[r8+rcx*8]           ; load the qword for this part of the set into rax. 8 bytes per qword
     mov [curset1qw],rax          ; save this qword for set 1
-    mov r8,[set2ptr]             ; pointer to set 1 array 
+    mov r9,[set2ptr]             ; pointer to set 2 structure
+    mov r8,[r9+setarrayptr]      ; pointer to set 2 array 
     mov rax,[r8+rcx*8]           ; load the qword for this part of the set into rax. 8 bytes per qword
     mov [curset2qw],rax          ; save this qword for set 2
 ; or for union
@@ -287,7 +290,8 @@ unionsets:
     or  rax,[curset2qw]          ; or is union
 ; save updated set 1 qword
     mov rcx,[qwoffset]           ; qword offset
-    mov r8,[set1ptr]             ; pointer to set 1 array 
+    mov r9,[set1ptr]             ; load pointer to set
+    mov r8,[r9+setarrayptr]      ; pointer to set 1 array 
     mov [r8+rcx*8],rax           ; save the qword back to the array
 ; advance to new qw if not done
     add qword [qwoffset],1       ; next qword of set
@@ -327,10 +331,12 @@ intersectsets:
 .nextqword:
 ; get current quad words for both sets
     mov rcx,[qwoffset]           ; qword offset
-    mov r8,[set1ptr]             ; pointer to set 1 array 
+    mov r9,[set1ptr]             ; load pointer to set
+    mov r8,[r9+setarrayptr]      ; pointer to set 1 array 
     mov rax,[r8+rcx*8]           ; load the qword for this part of the set into rax. 8 bytes per qword
     mov [curset1qw],rax          ; save this qword for set 1
-    mov r8,[set2ptr]             ; pointer to set 1 array 
+    mov r9,[set2ptr]             ; pointer to set 2 structure
+    mov r8,[r9+setarrayptr]      ; pointer to set 2 array 
     mov rax,[r8+rcx*8]           ; load the qword for this part of the set into rax. 8 bytes per qword
     mov [curset2qw],rax          ; save this qword for set 2
 ; and for intersection
@@ -338,7 +344,8 @@ intersectsets:
     and rax,[curset2qw]          ; and is intersection
 ; save updated set 1 qword
     mov rcx,[qwoffset]           ; qword offset
-    mov r8,[set1ptr]             ; pointer to set 1 array 
+    mov r9,[set1ptr]             ; load pointer to set
+    mov r8,[r9+setarrayptr]      ; pointer to set 1 array 
     mov [r8+rcx*8],rax           ; save the qword back to the array
 ; advance to new qw if not done
     add qword [qwoffset],1       ; next qword of set
