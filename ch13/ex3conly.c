@@ -19,10 +19,42 @@ struct bigposint
 };
 
 void
+bigposint_to_string(struct bigposint *bigptr,char *buffer)
+{
+int charswritten,bufferlocation;
+long i;
+
+bufferlocation = 0;
+
+for (i=(bigptr->numqwords)-1;i>=0;i--)
+{
+
+	if (i == ((bigptr->numqwords)-1))
+	    charswritten=sprintf(buffer+bufferlocation,"%ld",bigptr->qwords[i]);
+	else
+	    charswritten=sprintf(buffer+bufferlocation,"%018ld",bigptr->qwords[i]);
+
+	bufferlocation = bufferlocation + charswritten;
+}
+
+}
+
+void
+print_bigposint(char *prefix,struct bigposint *bigptr)
+{
+	char output[10000];
+    bigposint_to_string(bigptr,output);
+    printf("%s%s\n",prefix,output);
+}
+
+void
 set_bigposint(struct bigposint *bigptr,long value)
 {
 	bigptr->numqwords = 1;
 	bigptr->qwords[0] = value;
+	bigptr->qwords[1] = 0;
+	bigptr->qwords[2] = 0;
+	bigptr->qwords[3] = 0;
 }
 
 void
@@ -55,7 +87,6 @@ for (i=1;i<=maxi;i++)
     }
     targetptr->qwords[i-1] = x;
 }
-
 }
 
 void
@@ -69,25 +100,10 @@ mult_bigposit(struct bigposint *bigptr,long small)
 		add_bigposit(bigptr,&curval);
 }
 
-void
-bigposint_to_string(struct bigposint *bigptr,char *buffer)
-{
-int charswritten,bufferlocation,i;
-
-bufferlocation = 0;
-
-for (i=0;i<(bigptr->numqwords);i++)
-{
-	charswritten=sprintf(buffer+bufferlocation,"%s",bigptr->qwords[i]);
-	bufferlocation = bufferlocation + charswritten - 1;
-}
-
-}
-
 main()
 {
 struct bigposint big;
-char output[80];
+char output[10000];
 long i;
 
 set_bigposint(&big,50); /* start at 50 for 50! */
@@ -95,10 +111,11 @@ set_bigposint(&big,50); /* start at 50 for 50! */
 /* loop through rest of numbers < 50 for 50! */
 
 for (i=49;i>0;i--)
+{
 	mult_bigposit(&big,i);
+}
 
-bigposint_to_string(&big,output);
+print_bigposint("50! = ",&big);
 
-printf("50! = %s\n",output);
 }
 
