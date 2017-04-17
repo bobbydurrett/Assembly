@@ -14,7 +14,7 @@
 ; xmm0 and xmm1 are the float return registers
 ; http://www.nasm.us/links/unix64abi 
 
-global bigposint_to_string,set_bigposint,add_bigposint
+global bigposint_to_string,set_bigposint,add_bigposint,mult_bigposit
 extern sprintf
 
 segment .data
@@ -192,5 +192,61 @@ add_bigposint:
     jmp .forlooptop
 .doneforloop:    
     xor rax,rax                  ; rc 0
+    leave                        ; fix stack
+    ret                          ; return
+
+; mult_bigposit takes a bigposint and a qword and
+; multiplies them putting the result back in the bigposint
+; Arguments:
+; rdi - qword pointer to bigposint structure
+; rsi - qword small to multiply with
+; variables
+; rbx = i
+; r12 = bigptr
+; r13 = small
+
+segment .data
+
+curval: 
+    istruc bigposint 
+        at numqwords, dq 0
+        at qwords, dq 0,0,0,0
+    iend
+
+segment .text
+
+mult_bigposit:	         
+    push rbp                     
+    mov rbp,rsp
+    push rbx
+    push r12
+    push r13
+    push r13
+    mov r12,rdi                  ; save bigptr
+    mov r13,rsi                  ; save small
+; set_bigposint(&curval,0);    
+    lea rdi,[curval]
+    xor rsi,rsi
+    call set_bigposint
+; add_bigposint(&curval,bigptr);
+    lea rdi,[curval]
+    mov rsi,r12
+    call add_bigposint
+; for (i=1;i < small;i++) /* add small-1 times */
+    mov rbx,1                    ; i=1
+.forlooptop:
+    cmp rbx,r13
+    jge .forloopdone             ; i < small
+; add_bigposint(bigptr,&curval)    
+    mov rdi,r12
+    lea rsi,[curval]
+    call add_bigposint
+    inc rbx                      ; i++
+    jmp .forlooptop
+.forloopdone:
+    pop r13
+    pop r13
+    pop r12
+    pop rbx
     leave                        ; fix stack
     ret                          ; return
