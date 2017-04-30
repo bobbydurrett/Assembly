@@ -12,8 +12,8 @@
 ; xmm0 and xmm1 are the float return registers
 ; http://www.nasm.us/links/unix64abi
 
-global main,get_input,find_empty_location,read_nonl
-extern printf,scanf,fopen,fread,fgets,stdin,strlen
+global main,get_input,find_empty_location,read_nonl,write_record
+extern printf,scanf,fopen,fread,fgets,stdin,strlen,fseek,fwrite,fclose
 
 segment .bss
 
@@ -36,9 +36,6 @@ endstruc
 newcustomer istruc customer
             iend
 
-fileptr dq 0
-recordnumber dq 0
-
 segment .text
 
 main:	                         ; main program
@@ -49,10 +46,14 @@ main:	                         ; main program
     lea rsi,[filename]
     call get_input
     
-    lea rdi,[newcustomer]        
-    lea rsi,[filename]
+    lea rdi,[filename]
     call find_empty_location
-    mov [recordnumber],rax       ; save record number
+; rax has record number, rdx has file pointer    
+    
+    lea rdi,[newcustomer]        ; ptr to customer record first argument   
+    mov rsi,rdx                  ; file pointer second
+    mov rdx,rax                  ; record number third
+    call write_record
 
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
@@ -186,12 +187,11 @@ get_input:
 ; returns the record number of the record that will be there after 
 ; a new record is appended
 ; Arguments:
-; rdi - pointer to customer structure
-; rsi - pointer to file name buffer
-; Return
+; rdi - pointer to file name buffer
+; Return registers
 ; rax - record number
+; rdx - file pointer
 ; Register variables:
-; rbx - saved pointer to customer structure
 ; r12 - saved pointer to file name buffer
 ; r13 - file pointer
 ; r14 - record number
@@ -212,17 +212,20 @@ find_empty_location:
     push r13
     push r14
 
-    mov rbx,rdi                  ; save pointer to customer structure
-    mov r12,rsi                  ; save pointer to file name buffer
+    mov r12,rdi                  ; save pointer to file name buffer
     
     mov rdi,r12                  ; file name argument to fopen
     lea rsi,[mode]               ; mode
     call fopen
-    mov [fileptr],rax            ; save file pointer
-    mov r13,rax
+    mov r13,rax                  ; save file pointer
+    
+; seek to beginning of file    
+    mov rdi,r13                  ; first argument to fseek, fp
+    xor rsi,rsi                  ; seek to byte 0
+    xor rdx,rdx                  ; whence is 0
+    call fseek
     
     xor r14,r14                  ; start at record number 0
-    
     
 .readnext:
     lea rdi,[tempcust]           ; pointer to customer structure
@@ -234,7 +237,7 @@ find_empty_location:
     jl .eof                      ; done reading file
     
     xor rax,rax
-    mov eax,dword [rbx+c_id]
+    mov eax,dword [tempcust+c_id] ; id of record that we read
     cmp rax,0                    ; see if current record has id 0
     je .eof                      ; yes, then exit
     inc r14                      ; next record
@@ -242,6 +245,70 @@ find_empty_location:
         
 .eof:
     mov rax,r14                  ; return record number                 
+    mov rdx,r13                  ; return file pointer
+    pop r14                      
+    pop r13                      
+    pop r12                      
+    pop rbx
+    leave                        ; fix stack
+    ret                          ; return
+
+; write_record seeks to the location of the record number.
+; it writes the record at that location and closes the file.
+; before writing the record it updates the id field to be
+; record number + 1
+; Arguments:
+; rdi - pointer to new customer record
+; rsi - file pointer
+; rdx - record number
+; Register variables:
+; rbx - saved pointer to customer structure
+; r12 - file pointer
+; r13 - record number
+; r14 - new customer id
+
+segment .data
+
+outputfmt db `Id of new customer record is %ld\n`,0
+
+segment .text
+
+write_record:	                 
+    push rbp                     
+    mov rbp,rsp                  
+    push rbx
+    push r12
+    push r13
+    push r14
+
+    mov rbx,rdi                  ; save pointer to new customer structure
+    mov r12,rsi                  ; save file pointer
+    mov r13,rdx                  ; save record number
+; seek to record number    
+    mov rdi,r12                  ;  first argument to fseek, fp
+    mov rsi, r13
+    imul rsi,customer_size       ; multiply record number by size of structure to get byte offset
+    xor rdx,rdx                  ; whence is 0
+    call fseek
+; write record
+    mov rax,r13
+    inc rax
+    mov dword [rbx+c_id],eax     ; save id in new customer structure
+    mov r14,rax                  ; save in register
+    mov rdi,rbx                  ; first arg to fwrite ptr to structure
+    mov rsi,customer_size        ; second is size of structure
+    mov rdx,1                    ; number of elements = 1 record
+    mov rcx,r12                  ; file pointer
+    call fwrite
+; close file
+    mov rdi,r12                  ; file pointer is argument to fclose
+    call fclose
+; print record id
+    lea rdi,[outputfmt]          ; printf format
+    mov rsi,r14                  ; customer id
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print prompt
+
     pop r14                      
     pop r13                      
     pop r12                      
