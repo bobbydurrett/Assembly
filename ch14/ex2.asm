@@ -18,7 +18,7 @@ extern atol,printf,fopen,fseek,fread,fwrite,fclose
 
 segment .data
 
-mode db "r",0                   ; read-only
+mode db "r+",0                   ; read-write
 
 struc customer
 
@@ -36,6 +36,8 @@ foundrecord istruc customer
             iend
 
 errorfmt db `Did not find customer id %ld\n`,0
+argsfmt db `Arguments: file name, customer id, new balance\n`,0
+openfmt db `Not able to open file %s\n`,0
 
 segment .text
 
@@ -60,11 +62,20 @@ main:	                         ; labels start column 1
 ; Argc is number of arguments including name of program
 ; Argv is array of 8 byte pointers to strings
 
+; check for 3 command line arguments - argc == 4
+    cmp rdi,4
+    je .threeargs
+    lea rdi,[argsfmt]    
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print args message
+    jmp .finishnoclose
+    
 ; first save command line arguments
 
-    mov rbx,[rsi]                ; save pointer to file name
-    mov r12,[rsi+8]              ; save pointer to character version of cust id
-    mov r13,[rsi+16]             ; save pointer to character version of new balance
+.threeargs:
+    mov rbx,[rsi+8]              ; save pointer to file name - skip first argument
+    mov r12,[rsi+16]             ; save pointer to character version of cust id
+    mov r13,[rsi+24]             ; save pointer to character version of new balance
     mov rdi,r12                  ; character argument to atol
     call atol                    ; convert to long
     mov r12,rax                  ; now r12 has numeric version of cust id
@@ -77,10 +88,18 @@ main:	                         ; labels start column 1
     mov rdi,rbx                  ; file name argument to fopen
     lea rsi,[mode]               ; mode
     call fopen
-    mov r14,rax                  ; save file pointer    
+    mov r14,rax                  ; save file pointer  
+    cmp r14,0                    ; check for error
+    jne .fileopened
+    lea rdi,[openfmt]
+    mov rsi,rbx
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print open message
+    jmp .finishnoclose           ; no need to close file on exit
 
 ; seek to record for customer id
 
+.fileopened:
     mov rdi,r14                  ;  first argument to fseek, fp
     mov rsi,r12                  ; get customer id
     dec rsi                      ; -1 for record number
@@ -109,8 +128,8 @@ main:	                         ; labels start column 1
     lea rdi,[errorfmt]    
     mov rsi,r12                  ; customer id
     xor rax,rax                  ; no floating point args
-    call printf                  ; print prompt
-    jmp .finish
+    call printf                  ; print error message
+    jmp .closefinish
  
 ; update balance in structure
 
@@ -134,9 +153,11 @@ main:	                         ; labels start column 1
     
 ; close file
 
-.finish:
+.closefinish:
     mov rdi,r14
     call fclose
+    
+.finishnoclose:
       
     pop r15
     pop r15
