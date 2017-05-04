@@ -12,8 +12,8 @@
 ; xmm0 and xmm1 are the float return registers
 ; http://www.nasm.us/links/unix64abi
 
-global main,open_file,max_records,alloc_array,load_array
-extern fopen,fseek,ftell,malloc,fread,fclose
+global main,open_file,max_records,alloc_array,load_array,sort_array,compare,print_array
+extern fopen,fseek,ftell,malloc,fread,fclose,qsort,printf
 
 segment .data
 
@@ -66,6 +66,14 @@ main:
     mov rsi,r13                  ; arg2 pointer to array
     call load_array
     mov r14,rax                  ; save actual number of records loaded into array
+    
+    mov rdi,r13                  ; pointer to array arg1
+    mov rsi,r14                  ; actual number of records loaded
+    call sort_array
+
+    mov rdi,r13                  ; pointer to array arg1
+    mov rsi,r14                  ; actual number of records loaded
+    call print_array
 
 .errorexit:
     pop r14
@@ -164,8 +172,6 @@ alloc_array:
     leave                        ; fix stack
     ret                          ; return
     
-load_array
-
 ; load_array - reads all of the records with non-zero ids into
 ; the array
 ; Arguments
@@ -177,29 +183,145 @@ load_array
 ; rbx - records loaded in array so far
 ; r12 - file pointer saved
 ; r13 - pointer to array saved
+; r14 - pointer to current record
 
 load_array:	                         
     push rbp                     
     mov rbp,rsp 
     push rbx
+    push r12
+    push r13
+    push r14
     
     xor rbx,rbx                  ; zero records read so far
     mov r12,rdi                  ; save arguments
     mov r13,rsi
+    
+; seek to beginning of file - rdi already has file pointer
 
+    xor rsi,rsi                  ; offset=0
+    xor rdx,rdx                  ; whence is 0, relative to beginning of file
+    call fseek
+    
 ; read a record
 .nextrecord:
     mov rax,rbx
     imul rax,customer_size       ; rax is offset into customer array
-    mov rdi,r13
+    mov rdi,r13                  ; pointer to beginning of array
     add rdi,rax                  ; add offset to customer array start for record location
+    mov r14,rdi                  ; save pointer to current record
     mov rsi,customer_size        ; size of structure
     mov rdx,1                    ; one element
-    mov rcx,r14                  ; file pointer
+    mov rcx,r12                  ; file pointer
     call fread
     cmp rax,1                    ; check if record was read
-    je .noerror                  ; skip error
-    
+    jne .donereading             ; no more records
+    xor rax,rax
+    mov eax,dword [r14+c_id]     ; load id
+    cmp rax,0
+    je .nextrecord               ; skip record since id == 0
+    inc rbx                      ; record is ok so increment record found count
+    jmp .nextrecord              ; get another record
+.donereading:
+    mov rdi,r12
+    call fclose                  ; close file
+    mov rax,rbx                  ; return records actually read into array
+    pop r14
+    pop r13
+    pop r12
     pop rbx
     leave                        ; fix stack
     ret                          ; return
+
+; compare - compares two customer records
+; Arguments
+; rdi - pointer to record 1
+; rsi - pointer to record 2
+; Return
+; rax - negative, 0, positive number for comparison
+
+compare:
+    push rbp
+    mov rbp,rsp 
+    xor rax,rax                  ; clear rax
+    mov eax,[rdi+c_balance]      ; load first id
+    sub eax,[rsi+c_balance]      ; subtract second id
+    leave
+    ret
+
+; sort_array - sorts array of customer records
+; Arguments
+; rdi - pointer to array
+; rsi - number of records loaded in array
+      
+sort_array:
+    push rbp
+    mov rbp,rsp 
+; qsort(array,n,4,compare)
+; rdi already has array pointer
+; rsi already has number of elements
+    mov rdx,customer_size        ; number of bytes per record
+    lea rcx,[compare]            ; address of compare function
+    call qsort  
+    leave
+    ret
+    
+; print_array - prints array of customer records
+; Arguments
+; rdi - pointer to array
+; rsi - number of records loaded in array
+; Variables
+; rbx - current position in array
+; r12 - records left to print
+
+segment .data
+
+idfmt db `Id = %ld\n`,0
+namefmt db `Name = %s\n`,0
+addressfmt db `Address = %s\n`,0
+balancefmt db `Balance = %ld\n`,0
+rankfmt db `Rank = %ld\n`,0
+
+segment .text
+      
+print_array:
+    push rbp
+    mov rbp,rsp 
+    push rbx
+    push r12
+; initialize variables
+    mov rbx,rdi                  ; start at beginning of array
+    mov r12,rsi                  ; all records left to process
+.nextrecord:
+    lea rdi,[idfmt]    
+    xor rsi,rsi
+    mov esi,[rbx+c_id]
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print line
+    lea rdi,[namefmt]    
+    lea rsi,[rbx+c_name]
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print line
+    lea rdi,[addressfmt]    
+    lea rsi,[rbx+c_address]
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print line
+    lea rdi,[balancefmt]    
+    xor rsi,rsi
+    mov esi,[rbx+c_balance]
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print line
+    lea rdi,[rankfmt]    
+    xor rax,rax
+    mov al,[rbx+c_rank]
+    mov rsi,rax
+    xor rax,rax                  ; no floating point args
+    call printf                  ; print line
+    dec r12                      ; one fewer record
+    add rbx,customer_size        ; point to next array element
+    cmp r12,0
+    jg .nextrecord               ; fall through if out of records
+    pop r12
+    pop rbx
+    leave
+    ret
