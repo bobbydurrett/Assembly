@@ -4,8 +4,8 @@
 ; print - prints the entire stack
 ; any other string - pushes the string on to the stack 
 
-global main,read_nonl
-extern stdin,fgets,strlen,strcmp
+global main,read_nonl,push_command,pop_command,print_command
+extern stdin,fgets,strlen,strcmp,malloc,strdup,printf,free
 
 segment .bss
 
@@ -39,6 +39,9 @@ segment .text
 main:	                     
     push rbp                    
     mov rbp,rsp 
+    
+    xor rax,rax
+    mov qword [stack_ptr],rax    ; zero out stack pointer
 
 ; Read a line from the console
 
@@ -57,7 +60,7 @@ main:
     call strcmp
     cmp rax,0
     jne .checkprint              ; check for print command if pop not found
-; call pop_command here
+    call pop_command
     jmp .readline
     
 ; Check for print command
@@ -68,13 +71,13 @@ main:
     call strcmp
     cmp rax,0
     jne .dopush                  ; do push command if not pop or print
-; call print_command here
+    call print_command
     jmp .readline   
 
 ; Push string on stack
 
 .dopush:
-; call push_command here
+    call push_command
     jmp .readline
     
 .exitprogram:    
@@ -125,3 +128,159 @@ read_nonl:
     pop rbx
     leave                        ; fix stack
     ret                          ; return
+    
+; push_command takes the string from the command line
+; and pushes it on the stack. Does not take any arguments
+; or return any results. Uses buffer and stack_ptr
+; global variables.
+; Register variables:
+; rbx - pointer to new node
+
+segment .data
+
+pushmessagefmt db `Pushed: %s\n`,0
+
+segment .txt
+
+push_command:	                 
+    push rbp                     
+    mov rbp,rsp
+    push rbx
+    push rbx
+    
+; create a new node for the stack
+
+    mov rdi,stack_node_size      ; node struct size
+    call malloc
+    mov rbx,rax                  ; save pointer to new node
+    
+; add string value    
+    
+    lea rdi,[buffer]             ; duplicate string 
+    call strdup
+    mov qword [rbx+c_value],rax  ; save duped string pointer in new node
+    
+; add node to top of stack
+
+    mov rax,qword [stack_ptr]
+    mov qword [rbx+c_next],rax   ; save current stack pointer to next of new node
+    mov qword [stack_ptr],rbx    ; point top of stack to new node
+    
+; print what we did
+
+    lea rdi,[pushmessagefmt]
+    lea rsi,[buffer]
+    call printf
+    
+    pop rbx
+    pop rbx
+    leave                        ; fix stack
+    ret                          ; return
+    
+; pop_command pops the top string off of the stack.
+; Does not take any arguments or return any results. 
+; Uses buffer and stack_ptr global variables.
+; Register variables:
+; rbx - pointer to top node of stack
+
+segment .data
+
+emptymessagefmt db `Stack is empty. Nothing popped.\n`,0
+popmessagefmt db `Popping: %s\n`,0
+
+segment .txt
+
+pop_command:	                 
+    push rbp                     
+    mov rbp,rsp
+    push rbx
+    push rbx
+
+; Check for empty stack
+    
+    mov rbx,qword [stack_ptr]
+    cmp rbx,0
+    jne .stacknotempty
+    
+; Print empty message
+
+    lea rdi,[emptymessagefmt]
+    call printf
+    jmp .donepop
+    
+; Unlink node from list
+
+.stacknotempty:
+    mov rax,[rbx+c_next]         ; next pointer from node
+    mov qword [stack_ptr],rax    ; stack pointer now points to next node
+    
+; Print value of top node
+
+    lea rdi,[popmessagefmt]
+    mov rsi,[rbx+c_value]
+    call printf
+
+; Free string of top node
+
+    mov rdi,[rbx+c_value]
+    call free
+
+; Free node
+
+    mov rdi,rbx
+    call free
+
+.donepop:
+    pop rbx
+    pop rbx
+    leave                        ; fix stack
+    ret                          ; return
+
+; print_command prints the contents of the stack.
+; Does not take any arguments or return any results. 
+; Uses buffer and stack_ptr global variables.
+; Register variables:
+; rbx - pointer to current node
+
+segment .data
+
+printfmt db `%s\n`,0
+
+segment .txt
+
+print_command:	                 
+    push rbp                     
+    mov rbp,rsp
+    push rbx
+    push rbx
+
+; Get top of stack as current pointer
+    
+    mov rbx,qword [stack_ptr]
+    
+; Exit when end of list reached    
+
+.nextnode:
+    cmp rbx,0                  
+    je .printdone
+    
+; Print current node
+
+    lea rdi,[printfmt]
+    mov rsi,[rbx+c_value]
+    call printf
+
+; Advance to next node
+
+    mov rbx,[rbx+c_next]
+    jmp .nextnode
+
+.printdone:
+    pop rbx
+    pop rbx
+    leave                        ; fix stack
+    ret                          ; return
+    
+    
+    
+    
