@@ -7,13 +7,14 @@
 ; string of non-space characters a space and a number on input
 ; and just a string of non-space characters on lookup.
 
-global main,read_nonl,insert_hash,query_hash,calc_hash
-extern stdin,fgets,strlen,strcmp,sscanf,printf
+global main,read_nonl,insert_hash,query_hash,calc_hash,search_list
+extern stdin,fgets,strlen,strcmp,sscanf,printf,strcmp
 
 segment .bss
 
 buffer resb 2048                 ; 2K input buffer
-keystr resb 2048                    ; 2K key buffer
+keystr resb 2048                 ; 2K key buffer
+hash_table resq 100000           ; 100000 entry hash table
 
 segment .data
 
@@ -23,6 +24,15 @@ value dq 0                       ; hash table value
 hash_value dq 0                  ; index into hash table
 
 argcntfmt db `Skipped line: %s\n`,0
+
+struc list_node
+
+c_next resq 1                    ; next node in doubly linked list
+c_key resq 1                     ; pointer to string - key
+c_value resq 1                   ; 64 bit integer value associated with key
+alignb 8                         ; should not be needed - 64 bit alignment                        
+
+endstruc
 
 segment .text
 
@@ -125,13 +135,56 @@ read_nonl:
     
 ; insert_hash inserts a value into the hash table using
 ; the key. Uses the variables keystr and value as inputs.
+; If the key already is in the table just update the value.
+; variables
+; rbx - pointer to new node
 
 insert_hash:	                 
     push rbp                     
-    mov rbp,rsp  
+    mov rbp,rsp 
+    push rbx
+    push rbx
     
     call calc_hash               ; get hash value
     
+    call search_list             ; find the key on the list on the current ht entry
+    cmp rax,0
+    je .addnode                  ; add new node to list if key not found
+   
+; just update value on node that was found
+
+    mov rcx,qword [value]        ; load value into rcx
+    mov qword [rax+c_value],rcx  ; save value in existing node
+    jmp .doneinsert
+
+; insert new node since key not found
+
+.addnode:
+    mov rdi,list_node_size       ; node struct size
+    call malloc
+    mov rbx,rax                  ; save pointer to new node
+
+; add key string
+
+    lea rdi,[keystr]             ; duplicate string
+    call strdup
+    mov qword [rbx+c_key],rax    ; save duped string pointer in new node
+
+; add value
+
+    mov rax,qword [value]
+    mov qword [rbx+c_value],rax  ; save value in new node
+    
+; point next to current start of list and update hash table to point to new node
+
+    mov rax,qword [hash_value]   ; load index into hash table
+    mov rcx,qword [hash_table+rax] ; load pointer to list, possibly 0 if empty
+    mov qword [rbx+c_next],rcx   ; point new node next to previous start of list
+    mov qword [hash_table+rax],rbx ; point hash table entry to new node
+
+.doneinsert:
+    pop rbx
+    pop rbx
     leave                        ; fix stack
     ret                          ; return
 
@@ -181,5 +234,47 @@ calc_hash:
     idiv r9                      ; divide by 100000
     mov qword [hash_value],rdx   ; save remainder in hash_value
 
+    leave                        ; fix stack
+    ret                          ; return
+    
+; search_list - searches the list at the current hash table entry
+; for the key. Uses these global variables:
+; keystr - key as string
+; hash_table - hash table - array of 64 bit pointers.
+; value - value to be inserted
+; hash_value - hast table index
+; returns
+; rax - pointer to node with key or 0 if none found
+; variables
+; rbx - index into hash table
+; r12 - current node of list off hash table entry
+
+search_list:	                 
+    push rbp                     
+    mov rbp,rsp 
+    push rbx
+    push r12
+    
+    mov rbx,qword [hash_value]   ; load index into hash table
+    mov r12,qword [hash_table+rbx] ; load pointer to list, possibly 0 if empty
+    
+.nextitem:
+    cmp r12,0
+    je .donesearch               ; return 0 pointer if not found
+    
+; check key on current node
+
+    lea rdi,[keystr]             ; pointer to key string
+    mov rsi,qword [r12+c_key]    ; pointer to key string in current node
+    call strcmp
+    cmp rax,0
+    je .donesearch               ; done if keys are equal
+    mov r12,qword [r12+c_next]   ; next node in list
+    jmp .nextitem
+
+.donesearch:
+    mov rax,r12                  ; return pointer or 0
+    pop r12
+    pop rbx
     leave                        ; fix stack
     ret                          ; return
