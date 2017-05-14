@@ -7,8 +7,8 @@
 ; string of non-space characters a space and a number on input
 ; and just a string of non-space characters on lookup.
 
-global main,read_nonl
-extern stdin,fgets,strlen,strcmp,sscanf
+global main,read_nonl,insert_hash,query_hash
+extern stdin,fgets,strlen,strcmp,sscanf,printf
 
 segment .bss
 
@@ -20,6 +20,8 @@ segment .data
 scanfmt db "%s %ld",0
 
 value dq 0                       ; hash table value
+
+argcntfmt db `Skipped line: %s\n`,0
 
 segment .text
 
@@ -47,6 +49,29 @@ main:
     lea rcx,[value]              ; 
     xor rax,rax                  ; no floating point args
     call sscanf                  ; parse string
+    
+; two arguments means insert into hash table
+
+    cmp rax,2
+    jne .checkoneargument        ; not two arguments. check for one next
+    call insert_hash             ; insert value into hash table using keystr
+    jmp .readline                ; read next line
+    
+; one argument means query hash table for value
+
+.checkoneargument:
+    cmp rax,1
+    jne .badargumentcount        ; print error - should be 1 or 2 arguments
+    call query_hash              ; look up value in hash table using keystr
+    jmp .readline
+    
+; bad argument count
+
+.badargumentcount:    
+    lea rdi,[argcntfmt]
+    lea rsi,[buffer]
+    call printf
+    jmp .readline
 
 .exitprogram:
     xor rax,rax                  ; return code 0
@@ -94,5 +119,19 @@ read_nonl:
 .exitfunction:
     pop r12
     pop rbx
+    leave                        ; fix stack
+    ret                          ; return
+
+insert_hash:	                 
+    push rbp                     
+    mov rbp,rsp                  
+
+    leave                        ; fix stack
+    ret                          ; return
+
+query_hash:	                 
+    push rbp                     
+    mov rbp,rsp                  
+
     leave                        ; fix stack
     ret                          ; return
