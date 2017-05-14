@@ -8,7 +8,7 @@
 ; and just a string of non-space characters on lookup.
 
 global main,read_nonl,insert_hash,query_hash,calc_hash,search_list
-extern stdin,fgets,strlen,strcmp,sscanf,printf,strcmp
+extern stdin,fgets,strlen,strcmp,sscanf,printf,strcmp,malloc,strdup
 
 segment .bss
 
@@ -188,12 +188,43 @@ insert_hash:
     leave                        ; fix stack
     ret                          ; return
 
+; query_hash looks up a key in the hash table and returns 
+; the associated value. Uses the variable keystr input.
+; Prints message if key not found.
+
+segment .data
+
+notfoundfmt db `Key: %s not found\n`,0
+foundfmt db `Key: %s Value: %ld\n`,0
+
+segment .text
+
 query_hash:	                 
     push rbp                     
     mov rbp,rsp                  
 
     call calc_hash               ; get hash value
+    
+    call search_list             ; find the key on the list on the current ht entry
+    cmp rax,0
+    je .notfound                 ; key not found
+    
+; print value found
 
+    lea rdi,[foundfmt]
+    mov rsi,[rax+c_key]
+    mov rdx,[rax+c_value]
+    call printf
+    jmp .donequery
+    
+; not found message
+
+.notfound:
+    lea rdi,[notfoundfmt]
+    lea rsi,[keystr]
+    call printf
+    
+.donequery:
     leave                        ; fix stack
     ret                          ; return
 
