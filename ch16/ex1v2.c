@@ -4,10 +4,9 @@
 /*
 
 Getting matrix with distance between a bunch of 3 dimensional points.
-v1 is all c version with simple implementation.
+v2 calls assembly version of calc_distance.
 
-Average runtime for 20000 points is 3.538 seconds.
-Ten executions.
+3.4286 seconds with 20000 points averaging 10 executions.
 
 */
 
@@ -18,22 +17,7 @@ float y[NUM_POINTS];
 float z[NUM_POINTS];
 float distance[NUM_POINTS][NUM_POINTS];
 
-void
-calc_distance(long num_points,float x[],float y[],float z[],float distance[][NUM_POINTS])
-{
-long i,j;
-float xdiff,ydiff,zdiff;
-
-for (i=0;i<num_points;i++)
-    for (j=0;j<num_points;j++)
-    {
-		xdiff = x[j]-x[i];
-		ydiff = y[j]-y[i];
-		zdiff = z[j]-z[i];
-
-		distance[i][j]=sqrtf(xdiff*xdiff+ydiff*ydiff+zdiff*zdiff);
-	}
-}
+extern void calc_distance(long num_points,float x[],float y[],float z[],float distance[][NUM_POINTS]);
 
 main()
 {
