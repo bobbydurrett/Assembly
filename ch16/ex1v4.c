@@ -10,7 +10,7 @@ v3 calls assembly version of calc_distance with difference from v2.
 
 */
 
-#define NUM_POINTS 20000
+#define NUM_POINTS 32
 
 float x[NUM_POINTS];
 float y[NUM_POINTS];
@@ -35,9 +35,9 @@ main()
 
 	calc_distance(NUM_POINTS,x,y,z,distance);
 
-/*	for (i=0;i<NUM_POINTS;i++)
+	for (i=0;i<NUM_POINTS;i++)
 	    for (j=0;j<NUM_POINTS;j++)
-	        printf("distance[%ld][%ld]=%f\n",i,j,distance[i][j]); */
+	        printf("distance[%ld][%ld]=%f\n",i,j,distance[i][j]);
 
 }
 
