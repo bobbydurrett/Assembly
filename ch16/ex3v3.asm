@@ -62,7 +62,165 @@ block_matrix_multiply:
     call matrix_alloc
     mov qword [qrpermptr],rax    ; save pointer to new matrix
 ; calculate top left matrix in final result
-    
+;
+; top left quarter matrix 1 times
+; top left quarter matrix 2
+    mov rdi,qword [m1ptr]
+    call top_left
+    mov qword [qm1ptr], rax      ; store first quarter matrix
+    mov rdi,qword [m2ptr]
+    call top_left
+    mov qword [qm2ptr], rax      ; store second quarter matrix
+; multiply quarter matrixes
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qm1ptr]
+    mov rdx,qword [qm2ptr]
+    mov rcx,qword [qrpermptr]
+    call matrix_multiply
+; top right quarter matrix 1 times
+; bottom left quarter matrix 2
+    mov rdi,qword [m1ptr]
+    call top_right
+    mov qword [qm1ptr], rax      ; store first quarter matrix
+    mov rdi,qword [m2ptr]
+    call bottom_left
+    mov qword [qm2ptr], rax      ; store second quarter matrix
+; multiply quarter matrixes
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qm1ptr]
+    mov rdx,qword [qm2ptr]
+    mov rcx,qword [qrtempptr]
+    call matrix_multiply    
+; add the two products
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qrpermptr]
+    mov rdx,qword [qrtempptr]
+    call matrix_add
+; save quarter matrix result top left final result
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qrpermptr]
+    mov rdx,qword [resptr]
+    call save_top_left
+; calculate bottom left matrix in final result
+;
+; bottom left quarter matrix 1 times
+; top left quarter matrix 2
+    mov rdi,qword [m1ptr]
+    call bottom_left
+    mov qword [qm1ptr], rax      ; store first quarter matrix
+    mov rdi,qword [m2ptr]
+    call top_left
+    mov qword [qm2ptr], rax      ; store second quarter matrix
+; multiply quarter matrixes
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qm1ptr]
+    mov rdx,qword [qm2ptr]
+    mov rcx,qword [qrpermptr]
+    call matrix_multiply
+; bottom right quarter matrix 1 times
+; bottom left quarter matrix 2
+    mov rdi,qword [m1ptr]
+    call bottom_right
+    mov qword [qm1ptr], rax      ; store first quarter matrix
+    mov rdi,qword [m2ptr]
+    call bottom_left
+    mov qword [qm2ptr], rax      ; store second quarter matrix
+; multiply quarter matrixes
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qm1ptr]
+    mov rdx,qword [qm2ptr]
+    mov rcx,qword [qrtempptr]
+    call matrix_multiply    
+; add the two products
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qrpermptr]
+    mov rdx,qword [qrtempptr]
+    call matrix_add
+; save quarter matrix result bottom left final result
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qrpermptr]
+    mov rdx,qword [resptr]
+    call save_bottom_left    
+; calculate top right matrix in final result
+;
+; top left quarter matrix 1 times
+; top right quarter matrix 2
+    mov rdi,qword [m1ptr]
+    call top_left
+    mov qword [qm1ptr], rax      ; store first quarter matrix
+    mov rdi,qword [m2ptr]
+    call top_right
+    mov qword [qm2ptr], rax      ; store second quarter matrix
+; multiply quarter matrixes
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qm1ptr]
+    mov rdx,qword [qm2ptr]
+    mov rcx,qword [qrpermptr]
+    call matrix_multiply
+; top right quarter matrix 1 times
+; bottom right quarter matrix 2
+    mov rdi,qword [m1ptr]
+    call top_right
+    mov qword [qm1ptr], rax      ; store first quarter matrix
+    mov rdi,qword [m2ptr]
+    call bottom_right
+    mov qword [qm2ptr], rax      ; store second quarter matrix
+; multiply quarter matrixes
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qm1ptr]
+    mov rdx,qword [qm2ptr]
+    mov rcx,qword [qrtempptr]
+    call matrix_multiply    
+; add the two products
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qrpermptr]
+    mov rdx,qword [qrtempptr]
+    call matrix_add
+; save quarter matrix result top right final result
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qrpermptr]
+    mov rdx,qword [resptr]
+    call save_top_right    
+; calculate bottom right matrix in final result
+;
+; bottom left quarter matrix 1 times
+; top right quarter matrix 2
+    mov rdi,qword [m1ptr]
+    call bottom_left
+    mov qword [qm1ptr], rax      ; store first quarter matrix
+    mov rdi,qword [m2ptr]
+    call top_right
+    mov qword [qm2ptr], rax      ; store second quarter matrix
+; multiply quarter matrixes
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qm1ptr]
+    mov rdx,qword [qm2ptr]
+    mov rcx,qword [qrpermptr]
+    call matrix_multiply
+; bottom right quarter matrix 1 times
+; bottom right quarter matrix 2
+    mov rdi,qword [m1ptr]
+    call bottom_right
+    mov qword [qm1ptr], rax      ; store first quarter matrix
+    mov rdi,qword [m2ptr]
+    call bottom_right
+    mov qword [qm2ptr], rax      ; store second quarter matrix
+; multiply quarter matrixes
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qm1ptr]
+    mov rdx,qword [qm2ptr]
+    mov rcx,qword [qrtempptr]
+    call matrix_multiply    
+; add the two products
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qrpermptr]
+    mov rdx,qword [qrtempptr]
+    call matrix_add
+; save quarter matrix result bottom right final result
+    mov rdi,qword [ndiv2]
+    mov rsi,qword [qrpermptr]
+    mov rdx,qword [resptr]
+    call save_bottom_right    
 
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
