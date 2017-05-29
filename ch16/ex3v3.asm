@@ -21,8 +21,7 @@ global save_bottom_left
 global save_bottom_right
 global save_top_left
 global save_top_right
-global free
-global malloc
+extern free,malloc
 
 ; block_matrix_multiply multiplies two n x n matrixes
 ; using block matrix multiplication
@@ -323,67 +322,6 @@ matrix_multiply:
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
     ret                          ; return
-matrix_multiply:	         
-    push rbp                     
-    mov rbp,rsp
-    
-; start of i for loop
-    xor r8,r8                    ; i=0
-.topiloop:                       ; jump here for each i loop
-    cmp r8,rdi                   ; i<n
-    jge .endiloop                ; i loop done
-    xor r9,r9                    ; j=0
-.topjloop:                       ; jump here for each j loop
-    cmp r9,rdi                   ; j<n
-    jge .endjloop                ; j loop done
-    mov rax,rdi                  ; load n
-    imul rax,r8                  ; n*i
-    add rax,r9                   ; n*i+j
-    mov r11,4                    ; load 4
-    imul rax,r11                 ; 4*(n*i+j) - byte offset of [i,j]
-    movss xmm0,[zero]            ; load 0.0
-    movss [rcx+rax],xmm0         ; result[i][j] = 0;
-    xor r10,r10                  ; k=0
-.topkloop:                       ; jump here for each k loop
-    cmp r10,rdi                  ; k<n
-    jge .endkloop                ; k loop done
-; load matrix1[i][k]
-    mov rax,rdi                  ; load n
-    imul rax,r8                  ; n*i
-    add rax,r10                  ; n*i+k
-    mov r11,4                    ; load 4
-    imul rax,r11                 ; 4*(n*i+k) - byte offset of [i,k]
-    movss xmm0,[rsi+rax]         ; load matrix1[i][k]
-; load matrix2[k][j]
-    mov rax,rdi                  ; load n
-    imul rax,r10                 ; n*k
-    add rax,r9                   ; n*k+j
-    mov r11,4                    ; load 4
-    imul rax,r11                 ; 4*(n*k+j) - byte offset of [k,j]
-    movss xmm1,[rdx+rax]         ; load matrix2[k][j]    
-    mulss xmm0,xmm1              ; matrix1[i][k]*matrix2[k][j]
-; load result[i][j]
-    mov rax,rdi                  ; load n
-    imul rax,r8                  ; n*i
-    add rax,r9                   ; n*i+j
-    mov r11,4                    ; load 4
-    imul rax,r11                 ; 4*(n*i+j) - byte offset of [i,j]
-    movss xmm1,[rcx+rax]         ; result[i][j]
-    addss xmm0,xmm1              ; result[i][j]+(matrix1[i][k]*matrix2[k][j])
-    movss [rcx+rax],xmm0         ; save new result[i][j]
-; end k loop
-    inc r10                      ; k++
-    jmp .topkloop                ; next k loop
-.endkloop:                       ; done with k loop
-    inc r9                       ; j++
-    jmp .topjloop                ; next j loop
-.endjloop:                       ; done with j loop
-    inc r8                       ; i++
-    jmp .topiloop                ; next i loop
-.endiloop:
-    xor rax,rax                  ; return code 0
-    leave                        ; fix stack
-    ret                          ; return
 
 ; bottom_left - copies the bottom left quarter of the main matrix
 ; into an array large enough to hold it.
@@ -421,7 +359,7 @@ bottom_left:
     mov r10,qword [ndiv2]
     imul rax,r10                 ; n/2*(i-n/2)
     add rax,r9                   ; n/2*(i-n/2)+j
-    movss [rdi+4*rax],xmm0       ; store float into quarter array
+    movss [rsi+4*rax],xmm0       ; store float into quarter array
 ; next loop j
     inc r9
     jmp .topjloop
@@ -471,7 +409,7 @@ bottom_right:
     imul rax,r10                 ; n/2*(i-n/2)
     add rax,r9                   ; n/2*(i-n/2)+j
     sub rax,qword [ndiv2]        ; n/2*(i-n/2)+j-n/2
-    movss [rdi+4*rax],xmm0       ; store float into quarter array
+    movss [rsi+4*rax],xmm0       ; store float into quarter array
 ; next loop j
     inc r9
     jmp .topjloop
@@ -504,7 +442,7 @@ top_left:
 .topiloop:                       ; go here each loop
     cmp r8,qword [ndiv2]         ; i < n/2
     jge .doneiloop               ; exit loop
-    xor r9.r9                    ; j = 0
+    xor r9,r9                    ; j = 0
 .topjloop:
     cmp r9,qword [ndiv2]         ; j < n/2
     jge .donejloop
@@ -518,7 +456,7 @@ top_left:
     mov r10,qword [ndiv2]
     imul rax,r10                 ; n/2*(i)
     add rax,r9                   ; n/2*(i)+j
-    movss [rdi+4*rax],xmm0       ; store float into quarter array
+    movss [rsi+4*rax],xmm0       ; store float into quarter array
 ; next loop j
     inc r9
     jmp .topjloop
@@ -567,7 +505,7 @@ top_right:
     imul rax,r10                 ; n/2*(i)
     add rax,r9                   ; n/2*(i)+j
     sub rax,qword [ndiv2]        ; n/2*(i)+j-n/2
-    movss [rdi+4*rax],xmm0       ; store float into quarter array
+    movss [rsi+4*rax],xmm0       ; store float into quarter array
 ; next loop j
     inc r9
     jmp .topjloop
@@ -615,7 +553,7 @@ matrix_add:
     movss xmm0,[rsi+4*rax]       ; load target element
     movss xmm1,[rdx+4*rax]       ; load source element
     addss xmm0,xmm1              ; add
-    mov [rsi+4*rax],xmm0         ; store sum in target
+    movss [rsi+4*rax],xmm0         ; store sum in target
 ; next loop j
     inc r9
     jmp .topjloop
@@ -681,7 +619,7 @@ save_bottom_left:
     mov r10,qword [ndiv2]
     imul rax,r10                 ; n/2*(i-n/2)
     add rax,r9                   ; n/2*(i-n/2)+j
-    movss xmm0,[rdi+4*rax]       ; load from quarter array
+    movss xmm0,[rsi+4*rax]       ; load from quarter array
 ; calculate offset into main array
     mov rax,qword [n]            ; load n
     imul rax,r8                  ; n*i
@@ -731,7 +669,7 @@ save_bottom_right:
     imul rax,r10                 ; n/2*(i-n/2)
     add rax,r9                   ; n/2*(i-n/2)+j
     sub rax,qword [ndiv2]        ; n/2*(i-n/2)+j-n/2
-    movss xmm0,[rdi+4*rax]       
+    movss xmm0,[rsi+4*rax]       
 ; calculate offset into main array
     mov rax,qword [n]            ; load n
     imul rax,r8                  ; n*i
@@ -769,7 +707,7 @@ save_top_left:
 .topiloop:                       ; go here each loop
     cmp r8,qword [ndiv2]         ; i < n/2
     jge .doneiloop               ; exit loop
-    xor r9.r9                    ; j = 0
+    xor r9,r9                    ; j = 0
 .topjloop:
     cmp r9,qword [ndiv2]         ; j < n/2
     jge .donejloop
@@ -778,7 +716,7 @@ save_top_left:
     mov r10,qword [ndiv2]
     imul rax,r10                 ; n/2*(i)
     add rax,r9                   ; n/2*(i)+j
-    movss xmm0,[rdi+4*rax]
+    movss xmm0,[rsi+4*rax]
 ; calculate offset into main array
     mov rax,qword [n]            ; load n
     imul rax,r8                  ; n*i
@@ -827,7 +765,7 @@ save_top_right:
     imul rax,r10                 ; n/2*(i)
     add rax,r9                   ; n/2*(i)+j
     sub rax,qword [ndiv2]        ; n/2*(i)+j-n/2
-    movss xmm0,[rdi+4*rax]
+    movss xmm0,[rsi+4*rax]
 ; calculate offset into main array
     mov rax,qword [n]            ; load n
     imul rax,r8                  ; n*i

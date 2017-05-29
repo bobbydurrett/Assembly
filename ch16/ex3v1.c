@@ -18,7 +18,7 @@ sys     0m0.006s
 
 */
 
-#define N 4
+#define N 2
 
 float matrix1[2*N][2*N];
 float matrix2[2*N][2*N];
