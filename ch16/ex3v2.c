@@ -19,9 +19,21 @@ real    0m28.028s
 user    0m28.005s
 sys     0m0.006s
 
+N=500
+
+real    0m3.707s
+user    0m3.703s
+sys     0m0.001s
+
+N=250
+
+real    0m0.387s
+user    0m0.386s
+sys     0m0.001s
+
 */
 
-#define N 4
+#define N 250
 
 float matrix1[2*N][2*N];
 float matrix2[2*N][2*N];
@@ -55,9 +67,9 @@ main()
 
     matrix_multiply((2*N),matrix1,matrix2,result);
 
-    print_matrix("matrix1",matrix1);
+/*    print_matrix("matrix1",matrix1);
     print_matrix("matrix2",matrix2);
-    print_matrix("result",result);
+    print_matrix("result",result); */
 
     return 0;
 }

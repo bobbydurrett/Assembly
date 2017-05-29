@@ -13,9 +13,27 @@ see if caching can improve run time using block matrix multiplication.
 v3 splits the two matrixes into four equal sized blocks and does
 block matrix multiplication.
 
+With N=1000
+
+real    0m30.280s
+user    0m30.244s
+sys     0m0.014s
+
+N=500
+
+real    0m3.065s
+user    0m3.062s
+sys     0m0.002s
+
+N=250
+
+real    0m0.402s
+user    0m0.400s
+sys     0m0.002s
+
 */
 
-#define N 2
+#define N 250
 
 float matrix1[2*N][2*N];
 float matrix2[2*N][2*N];
@@ -49,9 +67,9 @@ main()
 
     block_matrix_multiply((2*N),matrix1,matrix2,result);
 
-    print_matrix("matrix1",matrix1);
+/*    print_matrix("matrix1",matrix1);
     print_matrix("matrix2",matrix2);
-    print_matrix("result",result);
+    print_matrix("result",result); */
 
     return 0;
 }
