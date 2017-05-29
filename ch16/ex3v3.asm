@@ -9,7 +9,19 @@
 ; the block matrix multiplication faster than the reguler
 ; matrix multiplication.
 
-global matrix_multiply,block_matrix_multiply
+global block_matrix_multiply
+global matrix_multiply
+global bottom_left
+global bottom_right
+global top_left
+global top_right
+global matrix_add
+global matrix_alloc
+global save_bottom_left
+global save_bottom_right
+global save_top_left
+global save_top_right
+global free
 
 ; block_matrix_multiply multiplies two n x n matrixes
 ; using block matrix multiplication
@@ -66,11 +78,11 @@ block_matrix_multiply:
 ; top left quarter matrix 1 times
 ; top left quarter matrix 2
     mov rdi,qword [m1ptr]
+    mov rsi,qword [qm1ptr]
     call top_left
-    mov qword [qm1ptr], rax      ; store first quarter matrix
     mov rdi,qword [m2ptr]
+    mov rsi,qword [qm2ptr]
     call top_left
-    mov qword [qm2ptr], rax      ; store second quarter matrix
 ; multiply quarter matrixes
     mov rdi,qword [ndiv2]
     mov rsi,qword [qm1ptr]
@@ -80,11 +92,11 @@ block_matrix_multiply:
 ; top right quarter matrix 1 times
 ; bottom left quarter matrix 2
     mov rdi,qword [m1ptr]
+    mov rsi,qword [qm1ptr]
     call top_right
-    mov qword [qm1ptr], rax      ; store first quarter matrix
     mov rdi,qword [m2ptr]
+    mov rsi,qword [qm2ptr]
     call bottom_left
-    mov qword [qm2ptr], rax      ; store second quarter matrix
 ; multiply quarter matrixes
     mov rdi,qword [ndiv2]
     mov rsi,qword [qm1ptr]
@@ -106,11 +118,11 @@ block_matrix_multiply:
 ; bottom left quarter matrix 1 times
 ; top left quarter matrix 2
     mov rdi,qword [m1ptr]
+    mov rsi,qword [qm1ptr]
     call bottom_left
-    mov qword [qm1ptr], rax      ; store first quarter matrix
     mov rdi,qword [m2ptr]
+    mov rsi,qword [qm2ptr]
     call top_left
-    mov qword [qm2ptr], rax      ; store second quarter matrix
 ; multiply quarter matrixes
     mov rdi,qword [ndiv2]
     mov rsi,qword [qm1ptr]
@@ -120,11 +132,11 @@ block_matrix_multiply:
 ; bottom right quarter matrix 1 times
 ; bottom left quarter matrix 2
     mov rdi,qword [m1ptr]
+    mov rsi,qword [qm1ptr]
     call bottom_right
-    mov qword [qm1ptr], rax      ; store first quarter matrix
     mov rdi,qword [m2ptr]
+    mov rsi,qword [qm2ptr]
     call bottom_left
-    mov qword [qm2ptr], rax      ; store second quarter matrix
 ; multiply quarter matrixes
     mov rdi,qword [ndiv2]
     mov rsi,qword [qm1ptr]
@@ -146,11 +158,11 @@ block_matrix_multiply:
 ; top left quarter matrix 1 times
 ; top right quarter matrix 2
     mov rdi,qword [m1ptr]
+    mov rsi,qword [qm1ptr]
     call top_left
-    mov qword [qm1ptr], rax      ; store first quarter matrix
     mov rdi,qword [m2ptr]
+    mov rsi,qword [qm2ptr]
     call top_right
-    mov qword [qm2ptr], rax      ; store second quarter matrix
 ; multiply quarter matrixes
     mov rdi,qword [ndiv2]
     mov rsi,qword [qm1ptr]
@@ -160,11 +172,11 @@ block_matrix_multiply:
 ; top right quarter matrix 1 times
 ; bottom right quarter matrix 2
     mov rdi,qword [m1ptr]
+    mov rsi,qword [qm1ptr]
     call top_right
-    mov qword [qm1ptr], rax      ; store first quarter matrix
     mov rdi,qword [m2ptr]
+    mov rsi,qword [qm2ptr]
     call bottom_right
-    mov qword [qm2ptr], rax      ; store second quarter matrix
 ; multiply quarter matrixes
     mov rdi,qword [ndiv2]
     mov rsi,qword [qm1ptr]
@@ -186,11 +198,11 @@ block_matrix_multiply:
 ; bottom left quarter matrix 1 times
 ; top right quarter matrix 2
     mov rdi,qword [m1ptr]
+    mov rsi,qword [qm1ptr]
     call bottom_left
-    mov qword [qm1ptr], rax      ; store first quarter matrix
     mov rdi,qword [m2ptr]
+    mov rsi,qword [qm2ptr]
     call top_right
-    mov qword [qm2ptr], rax      ; store second quarter matrix
 ; multiply quarter matrixes
     mov rdi,qword [ndiv2]
     mov rsi,qword [qm1ptr]
@@ -200,11 +212,11 @@ block_matrix_multiply:
 ; bottom right quarter matrix 1 times
 ; bottom right quarter matrix 2
     mov rdi,qword [m1ptr]
+    mov rsi,qword [qm1ptr]
     call bottom_right
-    mov qword [qm1ptr], rax      ; store first quarter matrix
     mov rdi,qword [m2ptr]
+    mov rsi,qword [qm2ptr]
     call bottom_right
-    mov qword [qm2ptr], rax      ; store second quarter matrix
 ; multiply quarter matrixes
     mov rdi,qword [ndiv2]
     mov rsi,qword [qm1ptr]
@@ -220,8 +232,16 @@ block_matrix_multiply:
     mov rdi,qword [ndiv2]
     mov rsi,qword [qrpermptr]
     mov rdx,qword [resptr]
-    call save_bottom_right    
-
+    call save_bottom_right
+; free malloced quarter matrixes
+    mov rdi,[qm1ptr]
+    call free
+    mov rdi,[qm2ptr]
+    call free
+    mov rdi,[qrtempptr]
+    call free
+    mov rdi,[qrpermptr]
+    call free
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
     ret                          ; return
@@ -364,6 +384,249 @@ matrix_multiply:
     inc r8                       ; i++
     jmp .topiloop                ; next i loop
 .endiloop:
+    xor rax,rax                  ; return code 0
+    leave                        ; fix stack
+    ret                          ; return
+
+; bottom_left - copies the bottom left quarter of the main matrix
+; into an array large enough to hold it.
+; Arguments:
+; rdi - pointer to full sized matrix
+; rsi - pointer to quarter size target array
+; Variables:
+; r8 - i
+; r9 - j
+; rax - offset calculations
+; r10 - offset calculations
+
+bottom_left:	         
+    push rbp                     
+    mov rbp,rsp
+; in main array i ranges from 0 to n-1 and so does j
+; bottom left i ranges from n/2 to n-1
+; j ranges from 0 to n/2-1
+    mov r8,qword [ndiv2]         ; i = n/2
+.topiloop:                       ; go here each loop
+    cmp r8,qword [n]             ; i < n
+    jge .doneiloop               ; exit loop
+    xor r9,r9                    ; j=0
+.topjloop:
+    cmp r9,qword [ndiv2]         ; j < n/2
+    jge .donejloop
+; calculate offset into main array
+    mov rax,qword [n]            ; load n
+    imul rax,r8                  ; n*i
+    add rax,r9                   ; n*i+j
+    movss xmm0,[rdi+4*rax]       ; load float from main array
+; calculate offset into quarter array
+    mov rax,r8
+    sub rax,qword [ndiv2]        ; i-n/2
+    mov r10,qword [ndiv2]
+    imul rax,r10                 ; n/2*(i-n/2)
+    add rax,r9                   ; n/2*(i-n/2)+j
+    movss [rdi+4*rax],xmm0       ; store float into quarter array
+; next loop j
+    inc r9
+    jmp .topjloop
+; next loop i
+.donejloop:
+    inc r8
+    jmp .topiloop
+.doneiloop:
+    xor rax,rax                  ; return code 0
+    leave                        ; fix stack
+    ret                          ; return
+
+; bottom_right - copies the bottom right quarter of the main matrix
+; into an array large enough to hold it.
+; Arguments:
+; rdi - pointer to full sized matrix
+; rsi - pointer to quarter size target array
+; Variables:
+; r8 - i
+; r9 - j
+; rax - offset calculations
+; r10 - offset calculations
+
+bottom_right:	         
+    push rbp                     
+    mov rbp,rsp
+; in main array i ranges from 0 to n-1 and so does j
+; bottom right i ranges from n/2 to n-1
+; j ranges from n/2 to n-1
+    mov r8,qword [ndiv2]         ; i = n/2
+.topiloop:                       ; go here each loop
+    cmp r8,qword [n]             ; i < n
+    jge .doneiloop               ; exit loop
+    mov r9,qword [ndiv2]         ; j = n/2
+.topjloop:
+    cmp r9,qword [n]             ; j < n
+    jge .donejloop
+; calculate offset into main array
+    mov rax,qword [n]            ; load n
+    imul rax,r8                  ; n*i
+    add rax,r9                   ; n*i+j
+    movss xmm0,[rdi+4*rax]       ; load float from main array
+; calculate offset into quarter array
+    mov rax,r8
+    sub rax,qword [ndiv2]        ; i-n/2
+    mov r10,qword [ndiv2]
+    imul rax,r10                 ; n/2*(i-n/2)
+    add rax,r9                   ; n/2*(i-n/2)+j
+    sub rax,qword [ndiv2]        ; n/2*(i-n/2)+j-n/2
+    movss [rdi+4*rax],xmm0       ; store float into quarter array
+; next loop j
+    inc r9
+    jmp .topjloop
+; next loop i
+.donejloop:
+    inc r8
+    jmp .topiloop
+.doneiloop:
+    xor rax,rax                  ; return code 0
+    leave                        ; fix stack
+    ret                          ; return
+
+; top_left - copies the top left quarter of the main matrix
+; into an array large enough to hold it.
+; Arguments:
+; rdi - pointer to full sized matrix
+; rsi - pointer to quarter size target array
+; Variables:
+; r8 - i
+; r9 - j
+; rax - offset calculations
+; r10 - offset calculations
+
+top_left:	         
+    push rbp                     
+    mov rbp,rsp
+; in main array i ranges from 0 to n-1 and so does j
+; bottom right i ranges from 0 to n/2-1 and so does j
+    xor r8,r8                    ; i = 0
+.topiloop:                       ; go here each loop
+    cmp r8,qword [ndiv2]         ; i < n/2
+    jge .doneiloop               ; exit loop
+    xor r9.r9                    ; j = 0
+.topjloop:
+    cmp r9,qword [ndiv2]         ; j < n/2
+    jge .donejloop
+; calculate offset into main array
+    mov rax,qword [n]            ; load n
+    imul rax,r8                  ; n*i
+    add rax,r9                   ; n*i+j
+    movss xmm0,[rdi+4*rax]       ; load float from main array
+; calculate offset into quarter array
+    mov rax,r8                   ; load i
+    mov r10,qword [ndiv2]
+    imul rax,r10                 ; n/2*(i)
+    add rax,r9                   ; n/2*(i)+j
+    movss [rdi+4*rax],xmm0       ; store float into quarter array
+; next loop j
+    inc r9
+    jmp .topjloop
+; next loop i
+.donejloop:
+    inc r8
+    jmp .topiloop
+.doneiloop:
+    xor rax,rax                  ; return code 0
+    leave                        ; fix stack
+    ret                          ; return
+    
+; top_right - copies the top right quarter of the main matrix
+; into an array large enough to hold it.
+; Arguments:
+; rdi - pointer to full sized matrix
+; rsi - pointer to quarter size target array
+; Variables:
+; r8 - i
+; r9 - j
+; rax - offset calculations
+; r10 - offset calculations
+
+top_right:	         
+    push rbp                     
+    mov rbp,rsp
+; in main array i ranges from 0 to n-1 and so does j
+; top right i ranges from 0 to n/2-1
+; j ranges from n/2 to n-1
+    xor r8,r8                    ; i = 0
+.topiloop:                       ; go here each loop
+    cmp r8,qword [ndiv2]         ; i < n/2
+    jge .doneiloop               ; exit loop
+    mov r9,qword [ndiv2]         ; j = n/2
+.topjloop:
+    cmp r9,qword [n]             ; j < n
+    jge .donejloop
+; calculate offset into main array
+    mov rax,qword [n]            ; load n
+    imul rax,r8                  ; n*i
+    add rax,r9                   ; n*i+j
+    movss xmm0,[rdi+4*rax]       ; load float from main array
+; calculate offset into quarter array
+    mov rax,r8
+    mov r10,qword [ndiv2]
+    imul rax,r10                 ; n/2*(i)
+    add rax,r9                   ; n/2*(i)+j
+    sub rax,qword [ndiv2]        ; n/2*(i)+j-n/2
+    movss [rdi+4*rax],xmm0       ; store float into quarter array
+; next loop j
+    inc r9
+    jmp .topjloop
+; next loop i
+.donejloop:
+    inc r8
+    jmp .topiloop
+.doneiloop:
+    xor rax,rax                  ; return code 0
+    leave                        ; fix stack
+    ret                          ; return
+    
+;    mov rdi,qword [ndiv2]
+;    mov rsi,qword [qrpermptr]
+;    mov rdx,qword [qrtempptr]
+;    call matrix_add
+
+; matrix_add - copies the top right quarter of the main matrix
+; into an array large enough to hold it.
+; Arguments:
+; rdi - number of elements in quarter array = n/2
+; rsi - pointer to quarter size target array
+; rdx - pointer to quarter size source array
+; Variables:
+; r8 - i
+; r9 - j
+; rax - offset calculations
+; r10 - offset calculations
+
+matrix_add:	         
+    push rbp                     
+    mov rbp,rsp
+    xor r8,r8                    ; i=0
+.topiloop:                       ; loop starts here
+    cmp r8,rdi                   ; i < n/2
+    jge .doneiloop               ; end loop
+    xor r9,r9                    ; j=0
+.topjloop:
+    cmp r9,rdi                   ; j < n/2
+    jge .donejloop
+; calculate array offset
+    mov rax,r8                   ; i
+    imul rax,rdi                 ; i*n/2
+    add rax,r9                   ; i*n/2+j
+    movss xmm0,[rsi+4*rax]       ; load target element
+    movss xmm1,[rdx+4*rax]       ; load source element
+    addss xmm0,xmm1              ; add
+    mov [rsi+4*rax],xmm0         ; store sum in target
+; next loop j
+    inc r9
+    jmp .topjloop
+; next loop i
+.donejloop:
+    inc r8
+    jmp .topiloop
+.doneiloop:    
     xor rax,rax                  ; return code 0
     leave                        ; fix stack
     ret                          ; return
