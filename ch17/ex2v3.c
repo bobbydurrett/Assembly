@@ -11,9 +11,9 @@ Calls assembly routine with mostly registers.
 #define STRING_SIZE 10000
 #define ITERATIONS 100
 
-real    0m10.357s
-user    0m10.352s
-sys     0m0.000s
+real    0m11.757s
+user    0m11.750s
+sys     0m0.001s
 
 */
 

@@ -11,9 +11,9 @@ Calls assembly routine trying to flatten inner loop
 #define STRING_SIZE 10000
 #define ITERATIONS 100
 
-real    0m10.795s
-user    0m10.789s
-sys     0m0.000s
+real    0m11.704s
+user    0m11.684s
+sys     0m0.001s
 
 */
 

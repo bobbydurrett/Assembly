@@ -6,14 +6,14 @@
 
 Finds largest common substring between two strings.
 
-Calls assembly routine.
+Unrolling middle loop.
 
 #define STRING_SIZE 10000
 #define ITERATIONS 100
 
-real    0m46.131s
-user    0m46.101s
-sys     0m0.003s
+real    0m10.171s
+user    0m10.164s
+sys     0m0.002s
 
 */
 

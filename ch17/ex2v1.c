@@ -9,9 +9,9 @@ Finds largest common substring between two strings.
 #define STRING_SIZE 10000
 #define ITERATIONS 100
 
-real    0m24.285s
-user    0m24.265s
-sys     0m0.002s
+real    0m27.229s
+user    0m27.212s
+sys     0m0.003s
 
 */
 

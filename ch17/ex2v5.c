@@ -11,6 +11,10 @@ Trying to unroll outer loop for performance due to pipelining.
 #define STRING_SIZE 10000
 #define ITERATIONS 100
 
+real    0m11.749s
+user    0m11.742s
+sys     0m0.000s
+
 */
 
 #define STRING_SIZE 10000

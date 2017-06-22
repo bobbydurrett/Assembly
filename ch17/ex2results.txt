@@ -1,0 +1,8 @@
+ex2v1.c:real    0m27.229s
+ex2v2.c:real    0m46.131s
+ex2v3.c:real    0m11.757s
+ex2v4.c:real    0m11.704s
+ex2v5.c:real    0m11.749s
+ex2v6.c:real    0m10.171s
+
+v6 was fastest. Uses registers like ex2v3 and unrolls loop 2.
