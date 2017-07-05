@@ -18,9 +18,9 @@ I'm just going to skip the edge pixels and leave the output 0 on the edges.
 #define IMAGE_SIZE 1000
 #define ITERATIONS 500
 
-real    0m28.722s
-user    0m28.707s
-sys     0m0.000s
+real    0m16.409s
+user    0m16.398s
+sys     0m0.002s
 
 */
 
@@ -39,18 +39,17 @@ apply_convolution(unsigned char image[][IMAGE_SIZE],unsigned char convoluted_ima
 	for (i=1;i<(image_size-1);i++)
 	    for (j=1;j<(image_size-1);j++)
 	    {
-			convoluted_image[i][j]=0;
+			temp=0;
 	        for (k=0;k<3;k++)
 	            for (m=0;m<3;m++)
 	            {
-					temp = convoluted_image[i][j];
 					temp += (image[i+k-1][j+m-1])*(convolution[k][m]);
-					if (temp > 255)
-					    temp = 255;
-					if (temp < 0)
-					    temp = 0;
-					convoluted_image[i][j]=temp;
 				}
+			if (temp > 255)
+			    temp = 255;
+			if (temp < 0)
+				temp = 0;
+			convoluted_image[i][j]=temp;
 		}
 }
 
@@ -69,15 +68,21 @@ main()
 	for (i=0;i<ITERATIONS;i++)
 		apply_convolution(image,convoluted_image,convolution,IMAGE_SIZE);
 
-	printf("image 1-3,1-3\n");
-	printf("%d %d %d\n",image[1][1],image[2][1],image[3][1]);
-	printf("%d %d %d\n",image[1][2],image[2][1],image[3][2]);
-	printf("%d %d %d\n",image[1][3],image[2][1],image[3][3]);
+	printf("image\n");
+	printf("%d %d %d %d\n",image[0][0],image[1][0],image[2][0],image[3][0]);
+	printf("%d %d %d %d\n",image[0][1],image[1][1],image[2][1],image[3][1]);
+	printf("%d %d %d %d\n",image[0][2],image[1][2],image[2][2],image[3][2]);
+	printf("%d %d %d %d\n",image[0][3],image[1][3],image[2][3],image[3][3]);
+
 	printf("convolution\n");
 	printf("%d %d %d\n",convolution[0][0],convolution[1][0],convolution[2][0]);
 	printf("%d %d %d\n",convolution[0][1],convolution[1][1],convolution[2][1]);
 	printf("%d %d %d\n",convolution[0][2],convolution[1][2],convolution[2][2]);
 
-    printf("convoluted_image[2][2] = %d\n",convoluted_image[2][2]);
+    printf("convoluted_image\n");
+	printf("%d %d %d %d\n",convoluted_image[0][0],convoluted_image[1][0],convoluted_image[2][0],convoluted_image[3][0]);
+	printf("%d %d %d %d\n",convoluted_image[0][1],convoluted_image[1][1],convoluted_image[2][1],convoluted_image[3][1]);
+	printf("%d %d %d %d\n",convoluted_image[0][2],convoluted_image[1][2],convoluted_image[2][2],convoluted_image[3][2]);
+	printf("%d %d %d %d\n",convoluted_image[0][3],convoluted_image[1][3],convoluted_image[2][3],convoluted_image[3][3]);
 }
 
