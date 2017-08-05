@@ -48,6 +48,16 @@ segment .bss
 first_8_words resw 8             ; first 8 words from offset
 second_8_words resw 8            ; second 8 words from offset
 
+conv_0_0 resw 8                  ; entry 0,0 of convolution repeated 8 times as words
+conv_0_1 resw 8                   
+conv_0_2 resw 8                   
+conv_1_0 resw 8                   
+conv_1_1 resw 8                   
+conv_1_2 resw 8                   
+conv_2_0 resw 8                   
+conv_2_1 resw 8                   
+conv_2_2 resw 8                   
+
 segment .text
 
 apply_convolution:	         
@@ -55,10 +65,124 @@ apply_convolution:
     mov rbp,rsp
     
 ; save arguments
+
     mov [image_ptr],rdi
     mov [conv_image_ptr],rsi
     mov [convolution_ptr],rdx
     mov [image_size],rcx
+    
+; load convolution array entries as 8 16 bit words
+
+    mov r8,[convolution_ptr]    ; pointer to convolution array in register
+; 0,0
+    xor rax,rax                 ; clear rax
+    movsx ax,byte [r8]          ; load byte 0,0	as word preserving sign
+    lea r9,[conv_0_0]           ; load pointer to 0,0 array
+    mov [r9],ax                 ; save word 
+    mov [r9+2],ax               ; save word 
+    mov [r9+4],ax               ; save word 
+    mov [r9+6],ax               ; save word 
+    mov [r9+8],ax               ; save word 
+    mov [r9+10],ax              ; save word 
+    mov [r9+12],ax              ; save word 
+    mov [r9+14],ax              ; save word 
+; 0,1
+    xor rax,rax                 ; clear rax
+    movsx ax,byte [r8+1]        ; load byte 0,1	as word preserving sign
+    lea r9,[conv_0_1]           ; load pointer to 0,1 array
+    mov [r9],ax                 ; save word 
+    mov [r9+2],ax               ; save word 
+    mov [r9+4],ax               ; save word 
+    mov [r9+6],ax               ; save word 
+    mov [r9+8],ax               ; save word 
+    mov [r9+10],ax              ; save word 
+    mov [r9+12],ax              ; save word 
+    mov [r9+14],ax              ; save word 
+; 0,2
+    xor rax,rax                 ; clear rax
+    movsx ax,byte [r8+2]        ; load byte 0,2	as word preserving sign
+    lea r9,[conv_0_2]           ; load pointer to 0,2 array
+    mov [r9],ax                 ; save word 
+    mov [r9+2],ax               ; save word 
+    mov [r9+4],ax               ; save word 
+    mov [r9+6],ax               ; save word 
+    mov [r9+8],ax               ; save word 
+    mov [r9+10],ax              ; save word 
+    mov [r9+12],ax              ; save word 
+    mov [r9+14],ax              ; save word 
+; 1,0
+    xor rax,rax                 ; clear rax
+    movsx ax,byte [r8+3]        ; load byte 1,0	as word preserving sign
+    lea r9,[conv_1_0]           ; load pointer to 1,0 array
+    mov [r9],ax                 ; save word 
+    mov [r9+2],ax               ; save word 
+    mov [r9+4],ax               ; save word 
+    mov [r9+6],ax               ; save word 
+    mov [r9+8],ax               ; save word 
+    mov [r9+10],ax              ; save word 
+    mov [r9+12],ax              ; save word 
+    mov [r9+14],ax              ; save word     
+; 1,1
+    xor rax,rax                 ; clear rax
+    movsx ax,byte [r8+4]        ; load byte 1,1	as word preserving sign
+    lea r9,[conv_1_1]           ; load pointer to 1,1 array
+    mov [r9],ax                 ; save word 
+    mov [r9+2],ax               ; save word 
+    mov [r9+4],ax               ; save word 
+    mov [r9+6],ax               ; save word 
+    mov [r9+8],ax               ; save word 
+    mov [r9+10],ax              ; save word 
+    mov [r9+12],ax              ; save word 
+    mov [r9+14],ax              ; save word     
+; 1,2
+    xor rax,rax                 ; clear rax
+    movsx ax,byte [r8+5]        ; load byte 1,2	as word preserving sign
+    lea r9,[conv_1_2]           ; load pointer to 1,2 array
+    mov [r9],ax                 ; save word 
+    mov [r9+2],ax               ; save word 
+    mov [r9+4],ax               ; save word 
+    mov [r9+6],ax               ; save word 
+    mov [r9+8],ax               ; save word 
+    mov [r9+10],ax              ; save word 
+    mov [r9+12],ax              ; save word 
+    mov [r9+14],ax              ; save word     
+; 2,0
+    xor rax,rax                 ; clear rax
+    movsx ax,byte [r8+6]        ; load byte 2,0	as word preserving sign
+    lea r9,[conv_2_0]           ; load pointer to 2,0 array
+    mov [r9],ax                 ; save word 
+    mov [r9+2],ax               ; save word 
+    mov [r9+4],ax               ; save word 
+    mov [r9+6],ax               ; save word 
+    mov [r9+8],ax               ; save word 
+    mov [r9+10],ax              ; save word 
+    mov [r9+12],ax              ; save word 
+    mov [r9+14],ax              ; save word     
+; 2,1
+    xor rax,rax                 ; clear rax
+    movsx ax,byte [r8+7]        ; load byte 2,1	as word preserving sign
+    lea r9,[conv_2_1]           ; load pointer to 2,1 array
+    mov [r9],ax                 ; save word 
+    mov [r9+2],ax               ; save word 
+    mov [r9+4],ax               ; save word 
+    mov [r9+6],ax               ; save word 
+    mov [r9+8],ax               ; save word 
+    mov [r9+10],ax              ; save word 
+    mov [r9+12],ax              ; save word 
+    mov [r9+14],ax              ; save word     
+; 2,2
+    xor rax,rax                 ; clear rax
+    movsx ax,byte [r8+8]        ; load byte 2,2	as word preserving sign
+    lea r9,[conv_2_2]           ; load pointer to 2,2 array
+    mov [r9],ax                 ; save word 
+    mov [r9+2],ax               ; save word 
+    mov [r9+4],ax               ; save word 
+    mov [r9+6],ax               ; save word 
+    mov [r9+8],ax               ; save word 
+    mov [r9+10],ax              ; save word 
+    mov [r9+12],ax              ; save word 
+    mov [r9+14],ax              ; save word     
+    
 ; set image offset
     xor rax,rax
     mov [image_offset],rax       ; image_offset = 0
