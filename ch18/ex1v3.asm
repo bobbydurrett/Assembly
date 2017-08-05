@@ -43,6 +43,12 @@ image_size dq 0                  ; size in bytes of x and y dimensions.
 
 image_offset dq 0                ; current offset into image array
 
+image_size_minus_2 dq 0          ; image_size - 2
+num_chunks_per_row dq 0          ; number of 14 byte chunks in one line with one byte each edge
+row dq 0                         ; row in image array starting at 0
+chunk dq 0                       ; 14 byte chunk in a row - 0 to (num_chunks_per_row-1)
+chunk_offset dq 0                ; byte offset into image array for current chunk
+
 segment .bss
 
 first_8_words resw 8             ; first 8 words from offset
@@ -183,22 +189,76 @@ apply_convolution:
     mov [r9+12],ax              ; save word 
     mov [r9+14],ax              ; save word     
     
-; set image offset
-    xor rax,rax
-    mov [image_offset],rax       ; image_offset = 0
-; get 16 words starting at image_offset
-.nextwords:
-    mov rax,[image_offset]
-    mov rbx,[image_ptr]
-    movdqu xmm0,[rax+rbx]        ; load 16 bytes at image_offset
-    movdqa xmm1,xmm0             ; save a copy of the 16 bytes
-    pxor xmm2,xmm2               ; xmm2 all zeros
-    punpcklbw xmm0,xmm2          ; xmm0 now has 16 bit words of the lower 8 bytes
-    punpckhbw xmm1,xmm2          ; xmm1 now has 16 bit words of the upper 8 bytes
-    movdqu [first_8_words],xmm0  ; save 8 words
-    movdqu [second_8_words],xmm1 ; save 8 more words
+; Setup loops for 14 byte chunks
 
+; num_chunks_per_row =(image_size-2)/14
+    
+    mov rax,[image_size]        ; image_size
+    dec rax
+    dec rax                     ; image_size-2
+    mov [image_size_minus_2],rax
+    mov r8,14                   ; load 14
+    xor rdx,rdx                 ; clear upper 64 bits
+    idiv r8                     ; (image_size-2)/14
+    mov [num_chunks_per_row],rax ; save num_chunks_per_row
+    
+; for row = 1 to (image_size - 2)
+    
+    xor rax,rax
+    inc rax
+    mov [row],rax               ; row = 1
+    
+; for chunk = 0 to (num_chunks_per_row-1)
+
+.nextrow:
+    xor rax,rax
+    mov [chunk],rax
+
+; chunk_offset = (row*image_size)+1+(chunk*14)   
+
+.nextchunk:
+    mov rax,[row]
+    mov r8,[image_size]
+    imul rax,r8                  ; row*image_size
+    inc rax                      ; (row*image_size)+1
+    mov r8,[chunk]
+    mov r9,14         
+    imul r8,r9                   ; chunk*14
+    add rax,r8                   ; (row*image_size)+1+(chunk*14)
+    mov [chunk_offset],rax
+
+; work on the chunk here
+
+; advance to next chunk
+    mov rax,[chunk]
+    inc rax                      ; chunk++
+    mov [chunk],rax
+    mov r8,[num_chunks_per_row]
+    dec r8                       ; num_chunks_per_row - 1
+    cmp rax,r8                   ; chunk <= (chunk_offset - 1)
+    jle .nextchunk               ; next chunk in current row
+; advance to next row
+    mov rax,[row]
+    inc rax
+    mov [row],rax
+    mov r8,[image_size_minus_2]
+    cmp rax,r8
+    jle .nextrow
+    
+; last row is done if we get here
 
     leave                        ; fix stack
     ret                          ; return
+
+
+; saving this for later
+;    mov rax,[image_offset]
+;    mov rbx,[image_ptr]
+;    movdqu xmm0,[rax+rbx]        ; load 16 bytes at image_offset
+;    movdqa xmm1,xmm0             ; save a copy of the 16 bytes
+;    pxor xmm2,xmm2               ; xmm2 all zeros
+;    punpcklbw xmm0,xmm2          ; xmm0 now has 16 bit words of the lower 8 bytes
+;    punpckhbw xmm1,xmm2          ; xmm1 now has 16 bit words of the upper 8 bytes
+;    movdqu [first_8_words],xmm0  ; save 8 words
+;    movdqu [second_8_words],xmm1 ; save 8 more words
 
