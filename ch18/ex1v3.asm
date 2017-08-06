@@ -49,6 +49,10 @@ row dq 0                         ; row in image array starting at 0
 chunk dq 0                       ; 14 byte chunk in a row - 0 to (num_chunks_per_row-1)
 chunk_offset dq 0                ; byte offset into image array for current chunk
 
+first_offset dq 0                ; byte offset into first 16 byte section of image array
+second_offset dq 0               ; byte offset into second 16 byte section of image array
+third_offset dq 0                ; byte offset into third 16 byte section of image array
+
 segment .bss
 
 first_8_words resw 8             ; first 8 words from offset
@@ -63,6 +67,9 @@ conv_1_2 resw 8
 conv_2_0 resw 8                   
 conv_2_1 resw 8                   
 conv_2_2 resw 8                   
+
+first_target resw 8               ; first 8 words of the 16 target words - sums for convoluted image
+second_target resw 8              ; second 8 words
 
 segment .text
 
@@ -229,6 +236,212 @@ apply_convolution:
 
 ; work on the chunk here
 
+; calculate byte offsets for the image array for the three 16 byte sections that
+; surround the chunk
+; first_offset = chunk_offset - image_size - 1
+; second_offset = chunk_offset - 1
+; third_offset = chunk_offset + image_size - 1
+
+    mov rax,[chunk_offset]
+    dec rax                      ; chunk_offset - 1
+    mov [second_offset],rax
+    mov r8,rax
+    mov r9,[image_size]
+    sub r8,r9                    ; chunk_offset - image_size - 1
+    mov [first_offset],r8
+    add rax,r9                   ; chunk_offset + image_size - 1
+    mov [third_offset],rax
+    
+; process first 16 bytes before the chunk - 16 words in two variables
+
+; load the 16 words
+
+    mov rax,[first_offset]
+    mov rbx,[image_ptr]
+    movdqu xmm0,[rax+rbx]        ; load 16 bytes at image_offset
+    movdqa xmm1,xmm0             ; save a copy of the 16 bytes
+    pxor xmm2,xmm2               ; xmm2 all zeros
+    punpcklbw xmm0,xmm2          ; xmm0 now has 16 bit words of the lower 8 bytes
+    punpckhbw xmm1,xmm2          ; xmm1 now has 16 bit words of the upper 8 bytes
+    movdqu [first_8_words],xmm0  ; save 8 words
+    movdqu [second_8_words],xmm1 ; save 8 more words
+
+; process convolution 0,0
+    
+    movdqu xmm2,[conv_0_0]       ; load conv_0_0 8 words
+    pmullw xmm0,xmm2             ; multiply by conv_0_0
+    pmullw xmm1,xmm2             ; ditto
+    movdqu [first_target],xmm0   ; save multiplied values in target arrays
+    movdqu [second_target],xmm1
+
+; conv 1,0
+
+    lea rax,[first_8_words]
+    inc rax
+    inc rax                      ; point to second word
+    movdqu xmm0,[rax]            ; load current 8 words shifted left one word
+    movdqu xmm1,[second_8_words] ; load second set of 8 words
+    pslldq xmm1,2                ; shift left 2 bytes
+    movdqu xmm2,[conv_1_0]       ; load conv_1_0 8 words
+    pmullw xmm0,xmm2             ; multiply by conv_1_0
+    pmullw xmm1,xmm2             ; ditto
+    movdqu xmm2,[first_target]
+    paddw xmm2,xmm0
+    movdqu [first_target],xmm2   ; add to target
+    movdqu xmm2,[second_target]
+    paddw xmm2,xmm1
+    movdqu [second_target],xmm2   ; add to target
+    
+; conv 2,0
+
+    lea rax,[first_8_words]
+    inc rax
+    inc rax                      
+    inc rax
+    inc rax                      ; point to third word
+    movdqu xmm0,[rax]            ; load current 8 words shifted left one word
+    movdqu xmm1,[second_8_words] ; load second set of 8 words
+    pslldq xmm1,4                ; shift left 4 bytes
+    movdqu xmm2,[conv_2_0]       ; load conv_2_0 8 words
+    pmullw xmm0,xmm2             ; multiply by conv_2_0
+    pmullw xmm1,xmm2             ; ditto
+    movdqu xmm2,[first_target]
+    paddw xmm2,xmm0
+    movdqu [first_target],xmm2   ; add to target
+    movdqu xmm2,[second_target]
+    paddw xmm2,xmm1
+    movdqu [second_target],xmm2   ; add to target
+    
+; process second 16 bytes around the chunk
+    
+; load the 16 words
+
+    mov rax,[second_offset]
+    mov rbx,[image_ptr]
+    movdqu xmm0,[rax+rbx]        ; load 16 bytes at image_offset
+    movdqa xmm1,xmm0             ; save a copy of the 16 bytes
+    pxor xmm2,xmm2               ; xmm2 all zeros
+    punpcklbw xmm0,xmm2          ; xmm0 now has 16 bit words of the lower 8 bytes
+    punpckhbw xmm1,xmm2          ; xmm1 now has 16 bit words of the upper 8 bytes
+    movdqu [first_8_words],xmm0  ; save 8 words
+    movdqu [second_8_words],xmm1 ; save 8 more words
+
+; process convolution 0,1
+    
+    movdqu xmm2,[conv_0_1]       ; load conv_0_1 8 words
+    pmullw xmm0,xmm2             ; multiply by conv_0_1
+    pmullw xmm1,xmm2             ; ditto
+    movdqu xmm2,[first_target]
+    paddw xmm2,xmm0
+    movdqu [first_target],xmm2   ; add to target
+    movdqu xmm2,[second_target]
+    paddw xmm2,xmm1
+    movdqu [second_target],xmm2   ; add to target
+
+; conv 1,1
+
+    lea rax,[first_8_words]
+    inc rax
+    inc rax                      ; point to second word
+    movdqu xmm0,[rax]            ; load current 8 words shifted left one word
+    movdqu xmm1,[second_8_words] ; load second set of 8 words
+    pslldq xmm1,2                ; shift left 2 bytes
+    movdqu xmm2,[conv_1_1]       ; load conv_1_1 8 words
+    pmullw xmm0,xmm2             ; multiply by conv_1_1
+    pmullw xmm1,xmm2             ; ditto
+    movdqu xmm2,[first_target]
+    paddw xmm2,xmm0
+    movdqu [first_target],xmm2   ; add to target
+    movdqu xmm2,[second_target]
+    paddw xmm2,xmm1
+    movdqu [second_target],xmm2   ; add to target
+    
+; conv 2,1
+
+    lea rax,[first_8_words]
+    inc rax
+    inc rax                      
+    inc rax
+    inc rax                      ; point to third word
+    movdqu xmm0,[rax]            ; load current 8 words shifted left one word
+    movdqu xmm1,[second_8_words] ; load second set of 8 words
+    pslldq xmm1,4                ; shift left 4 bytes
+    movdqu xmm2,[conv_2_1]       ; load conv_2_1 8 words
+    pmullw xmm0,xmm2             ; multiply by conv_2_1
+    pmullw xmm1,xmm2             ; ditto
+    movdqu xmm2,[first_target]
+    paddw xmm2,xmm0
+    movdqu [first_target],xmm2   ; add to target
+    movdqu xmm2,[second_target]
+    paddw xmm2,xmm1
+    movdqu [second_target],xmm2   ; add to target
+    
+; process third 16 bytes after the chunk
+    
+; load the 16 words
+
+    mov rax,[third_offset]
+    mov rbx,[image_ptr]
+    movdqu xmm0,[rax+rbx]        ; load 16 bytes at image_offset
+    movdqa xmm1,xmm0             ; save a copy of the 16 bytes
+    pxor xmm2,xmm2               ; xmm2 all zeros
+    punpcklbw xmm0,xmm2          ; xmm0 now has 16 bit words of the lower 8 bytes
+    punpckhbw xmm1,xmm2          ; xmm1 now has 16 bit words of the upper 8 bytes
+    movdqu [first_8_words],xmm0  ; save 8 words
+    movdqu [second_8_words],xmm1 ; save 8 more words
+
+; process convolution 0,2
+    
+    movdqu xmm2,[conv_0_2]       ; load conv_0_2 8 words
+    pmullw xmm0,xmm2             ; multiply by conv_0_2
+    pmullw xmm1,xmm2             ; ditto
+    movdqu xmm2,[first_target]
+    paddw xmm2,xmm0
+    movdqu [first_target],xmm2   ; add to target
+    movdqu xmm2,[second_target]
+    paddw xmm2,xmm1
+    movdqu [second_target],xmm2   ; add to target
+
+; conv 1,2
+
+    lea rax,[first_8_words]
+    inc rax
+    inc rax                      ; point to second word
+    movdqu xmm0,[rax]            ; load current 8 words shifted left one word
+    movdqu xmm1,[second_8_words] ; load second set of 8 words
+    pslldq xmm1,2                ; shift left 2 bytes
+    movdqu xmm2,[conv_1_2]       ; load conv_1_2 8 words
+    pmullw xmm0,xmm2             ; multiply by conv_1_2
+    pmullw xmm1,xmm2             ; ditto
+    movdqu xmm2,[first_target]
+    paddw xmm2,xmm0
+    movdqu [first_target],xmm2   ; add to target
+    movdqu xmm2,[second_target]
+    paddw xmm2,xmm1
+    movdqu [second_target],xmm2   ; add to target
+    
+; conv 2,2
+
+    lea rax,[first_8_words]
+    inc rax
+    inc rax                      
+    inc rax
+    inc rax                      ; point to third word
+    movdqu xmm0,[rax]            ; load current 8 words shifted left one word
+    movdqu xmm1,[second_8_words] ; load second set of 8 words
+    pslldq xmm1,4                ; shift left 4 bytes
+    movdqu xmm2,[conv_2_2]       ; load conv_2_2 8 words
+    pmullw xmm0,xmm2             ; multiply by conv_2_2
+    pmullw xmm1,xmm2             ; ditto
+    movdqu xmm2,[first_target]
+    paddw xmm2,xmm0
+    movdqu [first_target],xmm2   ; add to target
+    movdqu xmm2,[second_target]
+    paddw xmm2,xmm1
+    movdqu [second_target],xmm2   ; add to target
+    
+; convert 16 target words to 14 bytes and store in convoluted_image array
+    
 ; advance to next chunk
     mov rax,[chunk]
     inc rax                      ; chunk++
