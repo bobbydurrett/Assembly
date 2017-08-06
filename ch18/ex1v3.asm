@@ -438,9 +438,39 @@ apply_convolution:
     movdqu [first_target],xmm2   ; add to target
     movdqu xmm2,[second_target]
     paddw xmm2,xmm1
-    movdqu [second_target],xmm2   ; add to target
+    movdqu [second_target],xmm2  ; add to target
     
-; convert 16 target words to 14 bytes and store in convoluted_image array
+; convert 14 target words to 14 bytes and store in convoluted_image array
+
+; word 1
+
+    lea r8,[first_target]
+    xor rax,rax
+    mov ax,[r8]                  ; load first word
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater1
+    mov al,dx                    ; 255 if greater than 255 in word
+.notgreater1:
+    mov r9,conv_image_ptr        ; target array - output of function
+    mov r10,chunk_offset
+    mov [r9+r10],al              ; save byte
+
+; word 2
+
+    lea r8,[first_target]
+    xor rax,rax
+    mov ax,[r8+2]                ; load word 2
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater2
+    mov al,dx                    ; 255 if greater than 255 in word
+.notgreater2:
+    mov r9,conv_image_ptr        ; target array - output of function
+    mov r10,chunk_offset
+    mov [r9+r10+1],al            ; save byte 2
+    
+; repeat above through word 8, then do first 6 words in second_target
     
 ; advance to next chunk
     mov rax,[chunk]
