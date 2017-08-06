@@ -18,9 +18,9 @@ I'm just going to skip the edge pixels and leave the output 0 on the edges.
 #define IMAGE_SIZE 1000
 #define ITERATIONS 500
 
-real    0m16.409s
-user    0m16.398s
-sys     0m0.002s
+real    0m16.268s
+user    0m16.259s
+sys     0m0.000s
 
 */
 

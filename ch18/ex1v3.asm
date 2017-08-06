@@ -450,10 +450,10 @@ apply_convolution:
     mov dx,255                   ; 255
     cmp ax,dx
     jle .notgreater1
-    mov al,dx                    ; 255 if greater than 255 in word
+    mov al,dl                    ; 255 if greater than 255 in word
 .notgreater1:
-    mov r9,conv_image_ptr        ; target array - output of function
-    mov r10,chunk_offset
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
     mov [r9+r10],al              ; save byte
 
 ; word 2
@@ -464,13 +464,181 @@ apply_convolution:
     mov dx,255                   ; 255
     cmp ax,dx
     jle .notgreater2
-    mov al,dx                    ; 255 if greater than 255 in word
+    mov al,dl                    ; 255 if greater than 255 in word
 .notgreater2:
-    mov r9,conv_image_ptr        ; target array - output of function
-    mov r10,chunk_offset
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
     mov [r9+r10+1],al            ; save byte 2
     
-; repeat above through word 8, then do first 6 words in second_target
+; word 3
+
+    lea r8,[first_target]
+    xor rax,rax
+    mov ax,[r8+4]                ; load word 3
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater3
+    mov al,dl                    ; 255 if greater than 255 in word
+.notgreater3:
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
+    mov [r9+r10+2],al            ; save byte 3
+
+; word 4
+
+    lea r8,[first_target]
+    xor rax,rax
+    mov ax,[r8+6]                ; load word 4
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater4
+    mov al,dl                    ; 255 if greater than 255 in word
+.notgreater4:
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
+    mov [r9+r10+3],al            ; save byte 4
+
+; word 5
+
+    lea r8,[first_target]
+    xor rax,rax
+    mov ax,[r8+8]                ; load word 5
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater5
+    mov al,dl                    ; 255 if greater than 255 in word
+.notgreater5:
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
+    mov [r9+r10+4],al            ; save byte 5
+
+; word 6
+
+    lea r8,[first_target]
+    xor rax,rax
+    mov ax,[r8+10]               ; load word 6
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater6
+    mov al,dl                    ; 255 if greater than 255 in word
+.notgreater6:
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
+    mov [r9+r10+5],al            ; save byte 6
+
+; word 7
+
+    lea r8,[first_target]
+    xor rax,rax
+    mov ax,[r8+12]               ; load word 7
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater7
+    mov al,dl                    ; 255 if greater than 255 in word
+.notgreater7:
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
+    mov [r9+r10+6],al            ; save byte 7
+
+; word 8
+
+    lea r8,[first_target]
+    xor rax,rax
+    mov ax,[r8+14]               ; load word 8
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater8
+    mov al,dl                    ; 255 if greater than 255 in word
+.notgreater8:
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
+    mov [r9+r10+7],al            ; save byte 8
+
+; second target array 6 words
+
+; word 1
+
+    lea r8,[second_target]
+    xor rax,rax
+    mov ax,[r8]                  ; load first word
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater1s
+    mov al,dl                    ; 255 if greater than 255 in word
+.notgreater1s:
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
+    mov [r9+r10+8],al            ; save byte 9
+
+; word 2
+
+    lea r8,[second_target]
+    xor rax,rax
+    mov ax,[r8+2]                ; load word 2
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater2s
+    mov al,dl                    ; 255 if greater than 255 in word
+.notgreater2s:
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
+    mov [r9+r10+9],al            ; save byte 10
+    
+; word 3
+
+    lea r8,[second_target]
+    xor rax,rax
+    mov ax,[r8+4]                ; load word 3
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater3s
+    mov al,dl                    ; 255 if greater than 255 in word
+.notgreater3s:
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
+    mov [r9+r10+10],al            ; save byte 11
+
+; word 4
+
+    lea r8,[second_target]
+    xor rax,rax
+    mov ax,[r8+6]                ; load word 4
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater4s
+    mov al,dl                    ; 255 if greater than 255 in word
+.notgreater4s:
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
+    mov [r9+r10+11],al           ; save byte 12
+
+; word 5
+
+    lea r8,[second_target]
+    xor rax,rax
+    mov ax,[r8+8]                ; load word 5
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater5s
+    mov al,dl                    ; 255 if greater than 255 in word
+.notgreater5s:
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
+    mov [r9+r10+12],al           ; save byte 13
+
+; word 6
+
+    lea r8,[second_target]
+    xor rax,rax
+    mov ax,[r8+10]               ; load word 6
+    mov dx,255                   ; 255
+    cmp ax,dx
+    jle .notgreater6s
+    mov al,dl                    ; 255 if greater than 255 in word
+.notgreater6s:
+    mov r9,[conv_image_ptr]        ; target array - output of function
+    mov r10,[chunk_offset]
+    mov [r9+r10+13],al           ; save byte 14
     
 ; advance to next chunk
     mov rax,[chunk]

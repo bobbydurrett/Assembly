@@ -12,8 +12,8 @@ this one just simple assembly.
 #define IMAGE_SIZE 1000
 #define ITERATIONS 500
 
-real    0m12.054s
-user    0m12.040s
+real    0m11.917s
+user    0m11.901s
 sys     0m0.002s
 
 */

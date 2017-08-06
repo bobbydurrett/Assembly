@@ -7,8 +7,12 @@ This is chapter 18 exercise 1.
 v3 tries to improve on v2 by using SSE instructions
 like those in the chapter.
 
-IMAGE_SIZE is assumed to be divisible by 16.
+#define IMAGE_SIZE 1000
+#define ITERATIONS 500
 
+real    0m2.048s
+user    0m2.044s
+sys     0m0.002s
 
 */
 
