@@ -10,9 +10,9 @@ like those in the chapter.
 #define IMAGE_SIZE 1000
 #define ITERATIONS 500
 
-real    0m2.048s
-user    0m2.044s
-sys     0m0.002s
+real    0m2.054s
+user    0m2.049s
+sys     0m0.003s
 
 */
 
